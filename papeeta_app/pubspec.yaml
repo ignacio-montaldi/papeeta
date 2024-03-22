@@ -35,14 +35,14 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
-flutter_icons:
+flutter_launcher_icons:
 # Add icon in this folder and complete the path. Then run: flutter pub get 
 # Finally run: flutter pub run flutter_launcher_icons
   # Global
   image_path: "images/app_icon/"
   # Android
   android: "launcher_icon"
-  adaptive_icon_background: "#FFFFFF"
+  # adaptive_icon_background: "#FFFFFF"
   #adaptive_icon_foreground: "images/app_icon/"
   # iOS
   ios: true
@@ -55,6 +55,7 @@ flutter:
 
   assets:
     - images/
+    - images/app_icon/
 
   fonts:
     - family: Roboto
