@@ -27,6 +27,8 @@ dependencies:
   path: ^1.8.3
   provider: ^6.0.3
   shared_preferences: ^2.0.15
+  firebase_auth: ^4.17.9
+  cloud_firestore: ^4.15.9
   
 
 dev_dependencies:
@@ -39,14 +41,14 @@ flutter_launcher_icons:
 # Add icon in this folder and complete the path. Then run: flutter pub get 
 # Finally run: flutter pub run flutter_launcher_icons
   # Global
-  image_path: "images/app_icon/"
+  image_path: "images/app_icon/launcher_icon.png"
   # Android
   android: "launcher_icon"
   # adaptive_icon_background: "#FFFFFF"
   #adaptive_icon_foreground: "images/app_icon/"
   # iOS
-  ios: true
-  remove_alpha_ios: true
+  # ios: true
+  # remove_alpha_ios: true
 
 
 flutter:
@@ -56,6 +58,7 @@ flutter:
   assets:
     - images/
     - images/app_icon/
+    - images/splash/
 
   fonts:
     - family: Roboto

@@ -1,4 +1,0 @@
-enum PageNames {
-  home,
-  login,
-}

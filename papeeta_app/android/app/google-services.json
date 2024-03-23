@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "508124569769",
+    "project_id": "papeeta-bc323",
+    "storage_bucket": "papeeta-bc323.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:508124569769:android:87d6c084925c747a7589b8",
+        "android_client_info": {
+          "package_name": "com.imontaldi.papeetapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBW7jEqeo1IkV1DihGjFeOb0wrYT36itIY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
