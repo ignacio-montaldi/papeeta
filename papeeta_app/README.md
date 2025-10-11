@@ -1,4 +1,4 @@
-# Template
+# papeeta_app
 
 A new Flutter project.
 

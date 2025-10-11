@@ -1,38 +1,38 @@
-// Flutter imports:
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:papeeta/screens/wrapper.dart';
 
-// Package imports:
 import 'package:provider/provider.dart';
 
-void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  // SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-  //   statusBarColor: kPrimary,
-  // ));
-  runApp(
-    MultiProvider(
-      providers: const [],
-      child: const MyApp(),
-    ),
-  );
-}
+import 'package:papeeta/routes/routes.dart';
 
-class MyApp extends StatefulWidget {
+import 'package:papeeta/services/auth_service.dart';
+import 'package:papeeta/services/chat_service.dart';
+import 'package:papeeta/services/socket_service.dart';
+
+void main() => runApp(const MyApp());
+
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  MyHomePageState createState() => MyHomePageState();
-}
-
-class MyHomePageState extends State<MyApp> {
-  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: ThemeData(useMaterial3: true),
-      home: const Wrapper(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => AuthService(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => SocketService(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => ChatService(),
+        )
+      ],
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Chat App',
+        initialRoute: 'loading',
+        routes: appRoutes,
+      ),
     );
   }
 }
