@@ -6,11 +6,11 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:papeeta/global/enviroment.dart';
-import 'package:papeeta/models/usuario.dart';
-import 'package:papeeta/models/login_response.dart';
+import 'package:papeeta/models/usuario_model.dart';
+import 'package:papeeta/models/login_response_model.dart';
 
 class AuthService with ChangeNotifier {
-  late Usuario usuario;
+  late UsuarioModel usuario;
   bool _autenticando = false;
 
   final _storage = const FlutterSecureStorage();
@@ -82,7 +82,7 @@ class AuthService with ChangeNotifier {
       return true;
     } else {
       final respBody = jsonDecode(resp.body);
-      return respBody['msg'];
+      return respBody['body'];
     }
   }
 

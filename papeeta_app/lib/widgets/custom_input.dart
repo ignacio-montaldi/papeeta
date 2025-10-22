@@ -25,7 +25,7 @@ class CustomInput extends StatelessWidget {
         borderRadius: BorderRadius.circular(30),
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: Colors.black.withAlpha(127),
+            color: Colors.black.withAlpha(30),
             offset: const Offset(0, 5),
             blurRadius: 5,
           ),
@@ -41,9 +41,7 @@ class CustomInput extends StatelessWidget {
           focusedBorder: InputBorder.none,
           border: InputBorder.none,
           hintText: placeholder,
-          hintStyle: const TextStyle(
-            color: Colors.black26,
-          ),
+          hintStyle: const TextStyle(color: Colors.black26),
         ),
       ),
     );

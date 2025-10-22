@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:papeeta/widgets/widgets.dart';
 
 import 'package:provider/provider.dart';
 
 import 'package:papeeta/services/auth_service.dart';
-import 'package:papeeta/services/socket_service.dart';
 
 import 'package:papeeta/helpers/mostrar_alerta.dart';
-
-import 'package:papeeta/widgets/logo.dart';
-import 'package:papeeta/widgets/custom_input.dart';
-import 'package:papeeta/widgets/labels.dart';
-import 'package:papeeta/widgets/boton_azul.dart';
 
 class RegisterPage extends StatelessWidget {
   const RegisterPage({super.key});
@@ -27,11 +22,9 @@ class RegisterPage extends StatelessWidget {
             child: const Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Logo(
-                  titulo: 'Registro',
-                ),
+                Logo(titulo: 'Registro'),
                 _Form(),
-                Labels(
+                LoginLabels(
                   ruta: 'login',
                   titulo: '¿Ya tienes una cuenta?',
                   subtitulo: 'Ingresa ahora!',
@@ -39,7 +32,7 @@ class RegisterPage extends StatelessWidget {
                 Text(
                   'Terminos y condiciones de uso',
                   style: TextStyle(fontWeight: FontWeight.w200),
-                )
+                ),
               ],
             ),
           ),
@@ -64,7 +57,6 @@ class _FormState extends State<_Form> {
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
-    final socketService = Provider.of<SocketService>(context);
 
     return Container(
       margin: const EdgeInsets.only(top: 40),
@@ -76,18 +68,14 @@ class _FormState extends State<_Form> {
             placeholder: 'Nombre',
             textController: nameCtrl,
           ),
-          const SizedBox(
-            height: 20,
-          ),
+          const SizedBox(height: 20),
           CustomInput(
             icon: Icons.mail_outline,
             placeholder: 'Correo',
             keyboardType: TextInputType.emailAddress,
             textController: emailCtrl,
           ),
-          const SizedBox(
-            height: 20,
-          ),
+          const SizedBox(height: 20),
           CustomInput(
             icon: Icons.lock_outline,
             placeholder: 'Contraseña',
@@ -95,24 +83,26 @@ class _FormState extends State<_Form> {
             isPassword: true,
           ),
           const SizedBox(height: 20),
-          BotonAzul(
+          ButtonComponent(
             text: "Crear cuenta",
             onPressed: authService.autenticando
                 ? () {}
                 : () async {
                     final registroOk = await authService.register(
-                        nameCtrl.text, emailCtrl.text, passwordCtrl.text);
+                      nameCtrl.text,
+                      emailCtrl.text,
+                      passwordCtrl.text,
+                    );
 
                     if (!context.mounted) return;
 
                     if (registroOk == true) {
-                      socketService.connect();
-                      Navigator.pushReplacementNamed(context, 'usuarios');
+                      Navigator.pushReplacementNamed(context, 'home');
                     } else {
                       mostrarAlerta(context, 'Registro incorrecto', registroOk);
                     }
                   },
-          )
+          ),
         ],
       ),
     );

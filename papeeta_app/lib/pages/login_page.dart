@@ -2,14 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:papeeta/services/auth_service.dart';
-import 'package:papeeta/services/socket_service.dart';
 
 import 'package:papeeta/helpers/mostrar_alerta.dart';
-
-import 'package:papeeta/widgets/logo.dart';
-import 'package:papeeta/widgets/custom_input.dart';
-import 'package:papeeta/widgets/labels.dart';
-import 'package:papeeta/widgets/boton_azul.dart';
+import 'package:papeeta/widgets/widgets.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -26,17 +21,13 @@ class LoginPage extends StatelessWidget {
             child: const Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Logo(titulo: 'Messenger'),
+                Logo(titulo: 'Papeeta'),
                 _Form(),
-                Labels(
+                LoginLabels(
                   ruta: 'register',
                   titulo: '¿No tienes cuenta?',
                   subtitulo: "Crea una ahora!",
                 ),
-                Text(
-                  'Terminos y condiciones de uso',
-                  style: TextStyle(fontWeight: FontWeight.w200),
-                )
               ],
             ),
           ),
@@ -60,7 +51,6 @@ class _FormState extends State<_Form> {
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
-    final socketService = Provider.of<SocketService>(context);
 
     return Container(
       margin: const EdgeInsets.only(top: 40),
@@ -73,9 +63,7 @@ class _FormState extends State<_Form> {
             keyboardType: TextInputType.emailAddress,
             textController: emailCtrl,
           ),
-          const SizedBox(
-            height: 20,
-          ),
+          const SizedBox(height: 20),
           CustomInput(
             icon: Icons.lock_outline,
             placeholder: 'Contraseña',
@@ -83,26 +71,30 @@ class _FormState extends State<_Form> {
             isPassword: true,
           ),
           const SizedBox(height: 20),
-          BotonAzul(
+          ButtonComponent(
             text: "Ingrese",
             onPressed: authService.autenticando
                 ? () => {}
                 : () async {
                     FocusScope.of(context).unfocus();
                     bool loginOk = await authService.login(
-                        emailCtrl.text.trim(), passwordCtrl.text.trim());
+                      emailCtrl.text.trim(),
+                      passwordCtrl.text.trim(),
+                    );
 
                     if (!context.mounted) return;
 
                     if (loginOk) {
-                      socketService.connect();
-                      Navigator.pushReplacementNamed(context, 'usuarios');
+                      Navigator.pushReplacementNamed(context, 'home');
                     } else {
-                      mostrarAlerta(context, "Login incorrecto",
-                          "Revise sus credenciales nuevamente");
+                      mostrarAlerta(
+                        context,
+                        "Login incorrecto",
+                        "Revise sus credenciales nuevamente",
+                      );
                     }
                   },
-          )
+          ),
         ],
       ),
     );

@@ -5,6 +5,7 @@ class Enviroment {
       ? 'http://localhost:3000/api'
       : 'http://localhost:3000/api';
 
-  static String socketUrl =
-      Platform.isAndroid ? 'http://localhost:3000' : 'http://localhost:3000';
+  static String socketUrl = Platform.isAndroid
+      ? 'http://localhost:3000'
+      : 'http://localhost:3000';
 }

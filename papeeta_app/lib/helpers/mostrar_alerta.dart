@@ -16,7 +16,7 @@ mostrarAlerta(BuildContext context, String titulo, String subtitulo) {
             color: Colors.blue,
             onPressed: () => Navigator.pop(context),
             child: const Text('Ok'),
-          )
+          ),
         ],
       ),
     );
@@ -32,7 +32,7 @@ mostrarAlerta(BuildContext context, String titulo, String subtitulo) {
           isDefaultAction: true,
           onPressed: () => Navigator.pop(context),
           child: const Text('Ok'),
-        )
+        ),
       ],
     ),
   );
