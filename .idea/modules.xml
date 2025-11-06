@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/papeeta.iml" filepath="$PROJECT_DIR$/papeeta.iml" />
-      <module fileurl="file://$PROJECT_DIR$/android/papeeta_android.iml" filepath="$PROJECT_DIR$/android/papeeta_android.iml" />
+      <module fileurl="file://$PROJECT_DIR$/papeeta_app.iml" filepath="$PROJECT_DIR$/papeeta_app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/android/papeeta_app_android.iml" filepath="$PROJECT_DIR$/android/papeeta_app_android.iml" />
     </modules>
   </component>
 </project>
