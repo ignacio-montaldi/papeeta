@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 
@@ -7,7 +8,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:papeeta/global/enviroment.dart';
 import 'package:papeeta/models/usuario_model.dart';
-import 'package:papeeta/models/login_response_model.dart';
+import 'package:papeeta/models/response/login_response_model.dart';
 
 class AuthService with ChangeNotifier {
   late UsuarioModel usuario;
@@ -107,6 +108,7 @@ class AuthService with ChangeNotifier {
   }
 
   Future<void> _guardarToken(String token) async {
+    log(token);
     await _storage.write(key: 'token', value: token);
   }
 

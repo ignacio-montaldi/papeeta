@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:papeeta/helpers/helpers.dart';
 import 'package:papeeta/widgets/widgets.dart';
 
 import 'package:provider/provider.dart';
 
 import 'package:papeeta/services/auth_service.dart';
-
-import 'package:papeeta/helpers/mostrar_alerta.dart';
 
 class RegisterPage extends StatelessWidget {
   const RegisterPage({super.key});

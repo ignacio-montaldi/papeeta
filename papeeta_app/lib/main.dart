@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:papeeta/bloc/recipe/recipe_bloc.dart';
 
 import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:papeeta/bloc/blocs.dart';
 import 'package:papeeta/routes/routes.dart';
-
-import 'package:papeeta/services/auth_service.dart';
+import 'package:papeeta/services/services.dart';
 
 void main() => runApp(const MyApp());
 
@@ -18,7 +17,15 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [ChangeNotifierProvider(create: (_) => AuthService())],
       child: MultiBlocProvider(
-        providers: [BlocProvider(create: (context) => RecipeBloc())],
+        providers: [
+          BlocProvider(
+            create: (context) => RecipeBloc(recipesService: RecipesService()),
+          ),
+          BlocProvider(
+            create: (context) =>
+                CategoryBloc(categoriesService: CategoriesService()),
+          ),
+        ],
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Papeeta',

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:papeeta/bloc/recipe/recipe_bloc.dart';
-
+import 'package:papeeta/models/models.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 
+import 'package:papeeta/bloc/blocs.dart';
 import 'package:papeeta/services/auth_service.dart';
 import 'package:papeeta/widgets/widgets.dart';
 
@@ -23,6 +23,18 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+
+    final recipeBloc = BlocProvider.of<RecipeBloc>(context, listen: false);
+    final categoryBloc = BlocProvider.of<CategoryBloc>(context, listen: false);
+
+    if (recipeBloc.state.recipes == null || recipeBloc.state.recipes!.isEmpty) {
+      recipeBloc.getHomeRecipesList();
+    }
+
+    if (categoryBloc.state.categories == null ||
+        categoryBloc.state.categories!.isEmpty) {
+      categoryBloc.getCategoriesList();
+    }
   }
 
   @override
@@ -58,8 +70,11 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  _recargar() async {
-    await Future.delayed(Duration(seconds: 1));
+  Future<void> _recargar() async {
+    final recipeBloc = BlocProvider.of<RecipeBloc>(context, listen: false);
+    final categoryBloc = BlocProvider.of<CategoryBloc>(context, listen: false);
+    await recipeBloc.getHomeRecipesList();
+    await categoryBloc.getCategoriesList();
     _refreshController.refreshCompleted();
   }
 }
@@ -67,63 +82,77 @@ class _HomePageState extends State<HomePage> {
 class _MainView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final recipesBloc = BlocProvider.of<RecipeBloc>(context);
+    return BlocBuilder<RecipeBloc, RecipeState>(
+      builder: (context, recipeState) {
+        return BlocBuilder<CategoryBloc, CategoryState>(
+          builder: (context, categoryState) {
+            final recipes = recipeState.recipes;
+            final categories = categoryState.categories;
 
-    final Map<String, String> categories = {
-      'Mexicana': 'mexicana',
-      'Pastas': 'pastas',
-      'Asiática': 'asiatica',
-      'Entradas': 'entradas',
-      'Carne Vacuna': 'carne',
-      'Frutas': 'frutas',
-    };
-    final recetas = [
-      'Receta 1',
-      'Receta 2',
-      'Receta 3',
-      'Receta 4',
-      'Receta 5',
-      'Receta 6',
-      'Receta 7',
-      'Receta 8',
-    ];
+            if (recipes == null || categories == null) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-    return ListView(
-      padding: const EdgeInsets.only(top: 20),
-      physics: BouncingScrollPhysics(),
-      children: [
-        _CategoriesList(categories: categories),
-        const SizedBox(height: 20),
-        BlocBuilder<RecipeBloc, RecipeState>(
-          // recipesBloc
-          builder: (context, state) => RecipeList(recetas: recetas),
-        ),
-      ],
+            if (recipes.isEmpty && categories.isEmpty) {
+              return const Center(
+                child: Text('No se encontraron recetas ni categorías.'),
+              );
+            }
+
+            return ListView(
+              padding: const EdgeInsets.only(top: 20),
+              physics: const BouncingScrollPhysics(),
+              children: [
+                if (categories.isNotEmpty)
+                  _CategoriesList(categories: categories),
+                const SizedBox(height: 20),
+                if (recipes.isNotEmpty)
+                  RecipeList(recipes: recipes)
+                else
+                  const Center(child: Text('No se encontraron recetas.')),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }
 
-class _CategoriesList extends StatelessWidget {
+class _CategoriesList extends StatefulWidget {
   const _CategoriesList({required this.categories});
 
-  final Map<String, String> categories;
+  final List<CategoryModel> categories;
+  @override
+  State<_CategoriesList> createState() => _CategoriesListState();
+}
+
+class _CategoriesListState extends State<_CategoriesList> {
+  late final List<CategoryModel> limitedCategories;
+  @override
+  void initState() {
+    limitedCategories =
+        (widget.categories.where((c) => c.groupId != 2).toList()..shuffle())
+            .take(8)
+            .toList();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 130,
+      height: 150,
       child: ListView.separated(
-        itemCount: categories.length + 1,
+        itemCount: limitedCategories.length + 1,
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         separatorBuilder: (context, index) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
-          if (index < categories.length) {
-            final categoryName = categories.keys.elementAt(index);
-            final categoryImage = categories.values.elementAt(index);
+          if (index < limitedCategories.length) {
             return _CategoryItem(
-              label: categoryName,
-              imagePath: 'images/categories/$categoryImage.png',
+              category: limitedCategories[index],
+              label: limitedCategories[index].name,
+              imageUrl: limitedCategories[index].imageUrl,
             );
           }
 
@@ -138,20 +167,30 @@ class _CategoriesList extends StatelessWidget {
 }
 
 class _CategoryItem extends StatelessWidget {
-  const _CategoryItem({required this.label, this.imagePath, this.icon});
+  const _CategoryItem({
+    required this.label,
+    this.imageUrl,
+    this.icon,
+    this.category,
+  });
+  final CategoryModel? category;
   final String label;
-  final String? imagePath;
+  final String? imageUrl;
   final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
+    final categoryBloc = BlocProvider.of<CategoryBloc>(context, listen: false);
     return Column(
       children: [
         GestureDetector(
           onTap: () {
-            imagePath != null
-                ? Navigator.pushNamed(context, 'recipeList')
-                : Navigator.pushNamed(context, 'categories');
+            if (imageUrl != null) {
+              categoryBloc.add(SelectedCategory(category: category!));
+              Navigator.pushNamed(context, 'recipeList');
+            } else {
+              Navigator.pushNamed(context, 'categories');
+            }
           },
           child: Container(
             decoration: const BoxDecoration(
@@ -166,23 +205,23 @@ class _CategoryItem extends StatelessWidget {
               ],
             ),
             child: CircleAvatar(
-              radius: 45,
+              radius: 50,
               backgroundColor: Colors.white,
-              child: imagePath != null
-                  ? ClipOval(
-                      child: Image.asset(
-                        imagePath!,
-                        fit: BoxFit.cover,
-                        width: 90,
-                        height: 90,
-                      ),
+              child: imageUrl != null
+                  ? MyImageWidget(
+                      image: MyImageModel(url: imageUrl!),
+                      width: 65,
+                      height: 65,
                     )
-                  : Icon(icon, color: Colors.black54, size: 30),
+                  : Icon(icon, color: Colors.black54, size: 40),
             ),
           ),
         ),
         const SizedBox(height: 10),
-        SizedBox(height: 20, child: Text(label)),
+        SizedBox(
+          width: 110,
+          child: Text(label, maxLines: 2, textAlign: TextAlign.center),
+        ),
       ],
     );
   }

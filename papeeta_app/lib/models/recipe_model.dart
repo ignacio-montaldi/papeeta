@@ -1,6 +1,8 @@
 import 'package:papeeta/models/models.dart';
+import 'package:papeeta/models/response/response_models.dart';
 
 class RecipeModel {
+  final int id;
   final String title;
   final String subtitle;
   final List<String> imagesUrl;
@@ -9,6 +11,7 @@ class RecipeModel {
   final List<PreparationStepModel> preparationSteps;
 
   RecipeModel({
+    required this.id,
     required this.title,
     required this.subtitle,
     required this.imagesUrl,

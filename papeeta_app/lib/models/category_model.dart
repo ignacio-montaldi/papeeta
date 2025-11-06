@@ -1,6 +1,13 @@
 class CategoryModel {
-  final String category;
-  final String imageUrl;
+  final int? id;
+  final String name;
+  final String? imageUrl;
+  final int? groupId;
 
-  CategoryModel({required this.category, required this.imageUrl});
+  CategoryModel({
+    required this.id,
+    required this.name,
+    required this.imageUrl,
+    required this.groupId,
+  });
 }

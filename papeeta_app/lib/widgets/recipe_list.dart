@@ -1,19 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:papeeta/bloc/blocs.dart';
+import 'package:papeeta/models/models.dart';
+import 'package:papeeta/widgets/widgets.dart';
 
-class RecipeList extends StatelessWidget {
-  const RecipeList({super.key, required this.recetas});
+class RecipeList extends StatefulWidget {
+  const RecipeList({super.key, required this.recipes});
 
-  final List<String> recetas;
+  final List<RecipeModel> recipes;
+
+  @override
+  State<RecipeList> createState() => _RecipeListState();
+}
+
+class _RecipeListState extends State<RecipeList> {
+  late final List<RecipeModel> recipes;
+  @override
+  void initState() {
+    recipes = widget.recipes;
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final RecipeBloc recipeBloc = BlocProvider.of<RecipeBloc>(context);
     return Padding(
       padding: EdgeInsetsGeometry.symmetric(horizontal: 20),
       child: Column(
         children: [
-          ...recetas.map(
-            (recetas) => GestureDetector(
+          ...recipes.map<Widget>((recipe) {
+            return GestureDetector(
               onTap: () {
+                recipeBloc.add(SelectedRecipe(recipe: recipe));
                 Navigator.pushNamed(context, 'recipe');
               },
               child: Padding(
@@ -33,24 +51,21 @@ class RecipeList extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        Expanded(
-                          child: Container(
-                            height: double.infinity,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(15),
-                              ),
-                              image: DecorationImage(
-                                fit: BoxFit.cover,
-                                image: AssetImage('images/example.jpg'),
-                              ),
-                            ),
-                          ),
+                        MyImageWidget(
+                          image: MyImageModel(url: recipe.imagesUrl.first),
+                          borderRadius: BorderRadius.all(Radius.circular(15)),
+                          height: 190,
+                          width: double.infinity,
                         ),
                         SizedBox(height: 10),
                         Text(
-                          'Carne | Arroz | Papas | Plato principal',
+                          recipe.categories
+                              .map((category) => category.name)
+                              .toList()
+                              .join(' | '),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: Color(0xff999999),
                             fontSize: 13,
@@ -58,7 +73,7 @@ class RecipeList extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          recetas,
+                          recipe.title,
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w600,
@@ -70,8 +85,8 @@ class RecipeList extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
-          ),
+            );
+          }),
         ],
       ),
     );

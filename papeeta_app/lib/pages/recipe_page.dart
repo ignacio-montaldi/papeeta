@@ -1,180 +1,219 @@
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
-import 'package:papeeta/helpers/formateadores.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:papeeta/bloc/recipe/recipe_bloc.dart';
+import 'package:papeeta/helpers/formatters.dart';
 import 'package:papeeta/models/models.dart';
-
-class PreparationStep {
-  final int step;
-  final String description;
-
-  PreparationStep({required this.step, required this.description});
-}
+import 'package:papeeta/widgets/my_image_widget.dart';
 
 class RecipePage extends StatelessWidget {
   const RecipePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final categories = [
-      'Mexicana',
-      'Pastas',
-      'Asiática',
-      'Entradas',
-      'Carne Vacuna',
-      'Frutas',
-    ];
-
-    final List<IngredientModel> ingredients = [
-      IngredientModel(ammount: 250, measure: 'g.', ingredient: 'Harina 0000'),
-      IngredientModel(
-        ammount: 250,
-        measure: 'g.',
-        ingredient: 'Harina Integral 0000',
-      ),
-      IngredientModel(ammount: 10, measure: 'g.', ingredient: 'Sal'),
-      IngredientModel(ammount: 25, measure: 'g.', ingredient: 'Azucar'),
-      IngredientModel(ammount: 5, measure: 'g.', ingredient: 'Levadura Seca'),
-      IngredientModel(ammount: 300, measure: 'ml.', ingredient: 'Leche'),
-      IngredientModel(ammount: 50, measure: 'g.', ingredient: 'Manteca'),
-      IngredientModel(ammount: 0, measure: '', ingredient: 'Semillas a gusto'),
-      IngredientModel(ammount: 1, measure: '', ingredient: 'Huevo'),
-    ];
-
-    List<PreparationStep> preparationSteps = [
-      PreparationStep(
-        step: 1,
-        description:
-            'Herví agua en una olla grande con una pizca de sal. Cuando rompa el hervor, agregá la pasta y cociná según las instrucciones del paquete.',
-      ),
-      PreparationStep(
-        step: 2,
-        description:
-            'Mientras tanto, calentá una sartén con un poco de aceite de oliva y agregá la cebolla picada. Cociná hasta que esté transparente.',
-      ),
-      PreparationStep(
-        step: 3,
-        description:
-            'Agregá el ajo picado y cociná por 1 minuto más, sin dejar que se queme.',
-      ),
-      PreparationStep(
-        step: 4,
-        description:
-            'Incorporá los tomates triturados, una pizca de azúcar, sal y pimienta. Cociná a fuego lento durante 10-15 minutos.',
-      ),
-      PreparationStep(
-        step: 5,
-        description:
-            'Escurrí la pasta y agregala a la sartén con la salsa. Mezclá bien para que se impregne.',
-      ),
-      PreparationStep(
-        step: 6,
-        description:
-            'Serví caliente con hojas de albahaca fresca y queso rallado por encima.',
-      ),
-    ];
+    final recipeBloc = BlocProvider.of<RecipeBloc>(context);
+    final double appBarExpandedHeight = 300;
 
     return SafeArea(
       top: false,
       child: Scaffold(
-        body: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: <Widget>[
-            SliverAppBar(
-              stretch: true,
-              pinned: true,
-              centerTitle: true,
-              onStretchTrigger: () async {
-                // Triggers when stretching past offset
-                // print('Stretch');
-              },
-              stretchTriggerOffset: 300.0,
-              expandedHeight: 300.0,
-              backgroundColor: Theme.of(context).colorScheme.onPrimary,
-              iconTheme: IconThemeData(color: Colors.white),
-              flexibleSpace: _AppBarBody(),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsetsGeometry.all(20),
-                child: ListView(
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(0),
-                  children: [
-                    _CategoriesList(categories: categories),
-                    SizedBox(height: 10),
-                    _SectionTitle(title: 'Ingredientes'),
-                    SizedBox(height: 5),
-                    _IngredientList(ingredients: ingredients),
-                    SizedBox(height: 10),
-                    _SectionTitle(title: 'Preparación'),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        body: BlocBuilder<RecipeBloc, RecipeState>(
+          builder: (context, state) {
+            RecipeModel selectedRecipe = state.selectedRecipe!;
+            if (selectedRecipe.ingredients.isEmpty ||
+                selectedRecipe.preparationSteps.isEmpty) {
+              recipeBloc.getRecipeDetail(state.selectedRecipe!.id);
+              return Center(child: CircularProgressIndicator());
+            }
+
+            selectedRecipe = state.selectedRecipe!;
+
+            return CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: <Widget>[
+                SliverAppBar(
+                  stretch: true,
+                  pinned: true,
+                  centerTitle: true,
+                  onStretchTrigger: () async {
+                    // Triggers when stretching past offset
+                    // print('Stretch');
+                  },
+                  stretchTriggerOffset: 300.0,
+                  expandedHeight: appBarExpandedHeight,
+                  backgroundColor: Theme.of(context).colorScheme.onPrimary,
+                  iconTheme: IconThemeData(color: Colors.white),
+                  flexibleSpace: _AppBarBody(
+                    selectedRecipe: selectedRecipe,
+                    appBarExpandedHeight: appBarExpandedHeight,
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsetsGeometry.all(20),
+                    child: ListView(
+                      shrinkWrap: true,
+                      physics: NeverScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(0),
                       children: [
-                        ...preparationSteps.map((step) {
-                          return Column(
-                            children: [
-                              RichText(
-                                text: TextSpan(
-                                  style: TextStyle(
-                                    color: Colors.black54,
-                                    fontSize: 15,
-                                  ),
-                                  children: <TextSpan>[
-                                    TextSpan(
-                                      text: '${step.step}. ',
+                        _CategoriesList(
+                          categories: selectedRecipe.categories
+                              .map((category) => category.name)
+                              .toList(),
+                        ),
+                        SizedBox(height: 10),
+                        _SectionTitle(title: 'Ingredientes'),
+                        SizedBox(height: 5),
+                        _IngredientList(
+                          ingredients: selectedRecipe.ingredients,
+                        ),
+                        SizedBox(height: 10),
+                        _SectionTitle(title: 'Preparación'),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ...selectedRecipe.preparationSteps.map((step) {
+                              return Column(
+                                children: [
+                                  RichText(
+                                    text: TextSpan(
                                       style: TextStyle(
-                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black54,
+                                        fontSize: 15,
                                       ),
+                                      children: <TextSpan>[
+                                        TextSpan(
+                                          text: '${step.stepNumber}. ',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        TextSpan(text: step.description),
+                                      ],
                                     ),
-                                    TextSpan(text: step.description),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 5),
-                            ],
-                          );
-                        }),
+                                  ),
+                                  SizedBox(height: 5),
+                                ],
+                              );
+                            }),
+                          ],
+                        ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );
   }
 }
 
-class _AppBarBody extends StatelessWidget {
+class _AppBarBody extends StatefulWidget {
+  final RecipeModel selectedRecipe;
+  final double appBarExpandedHeight;
+
+  const _AppBarBody({
+    required this.selectedRecipe,
+    required this.appBarExpandedHeight,
+  });
+
+  @override
+  State<_AppBarBody> createState() => _AppBarBodyState();
+}
+
+class _AppBarBodyState extends State<_AppBarBody> {
+  int currentIndex = 0;
+
   @override
   Widget build(BuildContext context) {
-    return FlexibleSpaceBar(
-      title: Text(
-        'Receta Título',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-      ),
-      // centerTitle: true,
-      background: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image(image: AssetImage('images/example.jpg'), fit: BoxFit.cover),
-          // Capa semi-transparente para mejorar el contraste del texto
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: <Color>[
-                  Colors.black.withAlpha(0),
-                  Colors.black.withAlpha(60),
-                ],
+    final List<String> images = widget.selectedRecipe.imagesUrl;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double currentHeight = constraints.maxHeight;
+        double maxHeight = widget.appBarExpandedHeight;
+        const double minHeight = kToolbarHeight + 20; // altura mínima aprox.
+        final double t = ((currentHeight - minHeight) / (maxHeight - minHeight))
+            .clamp(0.0, 1.0);
+
+        final double bottomPadding = 10.0 * t;
+        return FlexibleSpaceBar(
+          title: Padding(
+            padding: EdgeInsets.only(bottom: bottomPadding),
+            child: Text(
+              widget.selectedRecipe.title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
-        ],
-      ),
+          background: Stack(
+            fit: StackFit.expand,
+            children: [
+              CarouselSlider.builder(
+                itemCount: images.length,
+                itemBuilder: (context, index, realIndex) {
+                  final imageUrl = images[index];
+                  return MyImageWidget(
+                    image: MyImageModel(url: imageUrl),
+                    fit: BoxFit.cover,
+                  );
+                },
+                options: CarouselOptions(
+                  height: double.infinity,
+                  viewportFraction: 1.0,
+                  scrollPhysics: const BouncingScrollPhysics(),
+                  onPageChanged: (index, reason) {
+                    setState(() => currentIndex = index);
+                  },
+                ),
+              ),
+              // capa de gradiente
+              IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.center,
+                      end: Alignment.bottomCenter,
+                      colors: <Color>[
+                        Colors.black.withAlpha(0),
+                        Colors.black.withAlpha(180),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // indicadores
+              Positioned(
+                bottom: 16,
+                left: 0,
+                right: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(images.length, (index) {
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      width: currentIndex == index ? 10 : 8,
+                      height: currentIndex == index ? 10 : 8,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: currentIndex == index
+                            ? Colors.white
+                            : Colors.white.withAlpha(100),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -237,18 +276,22 @@ class _IngredientList extends StatelessWidget {
           String regularText = '';
 
           boldText += '\u2022 ';
-          if (ingredient.ammount != 0) {
-            boldText += formatDouble(ingredient.ammount);
+          if (ingredient.ammount != null && ingredient.ammount != 0) {
+            boldText += formatDouble(ingredient.ammount ?? 0);
           }
-          boldText += ingredient.measure;
+          boldText += ingredient.measure ?? '';
 
-          if (ingredient.ammount != 0) {
+          if (ingredient.ammount != null && ingredient.ammount != 0) {
             regularText += ' ';
           }
-          if (ingredient.measure != '') {
+          if (ingredient.measure != null && ingredient.measure != '') {
             regularText += 'de ';
           }
-          regularText += ingredient.ingredient;
+          final bool noMeasureOrAmmount = (boldText == '\u2022 ');
+
+          regularText += noMeasureOrAmmount
+              ? ingredient.name.capitalize()
+              : ingredient.name;
 
           return Column(
             children: [

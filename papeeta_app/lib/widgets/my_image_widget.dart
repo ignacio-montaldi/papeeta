@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:papeeta/models/my_image_model.dart';
 
-class AppImageWidget extends StatelessWidget {
+class MyImageWidget extends StatelessWidget {
   final MyImageModel image;
   final BoxFit fit;
   final double? width;
@@ -11,7 +11,7 @@ class AppImageWidget extends StatelessWidget {
   final Widget? placeholder;
   final Widget? errorWidget;
 
-  const AppImageWidget({
+  const MyImageWidget({
     super.key,
     required this.image,
     this.fit = BoxFit.cover,

@@ -1,11 +1,11 @@
 class IngredientModel {
-  final double ammount;
-  final String measure;
-  final String ingredient;
+  final double? ammount;
+  final String? measure;
+  final String name;
 
   IngredientModel({
     required this.ammount,
     required this.measure,
-    required this.ingredient,
+    required this.name,
   });
 }
