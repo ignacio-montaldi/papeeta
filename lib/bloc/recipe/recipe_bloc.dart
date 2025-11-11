@@ -31,37 +31,39 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
       (event, emit) =>
           emit(state.copyWith(recipesByCategory: event.recipesByCategory)),
     );
-  }
 
-  Future<void> getHomeRecipesList() async {
-    final recipeListResponse = await _recipesService.getHomeRecipeList();
+    on<LoadHomeRecipes>((event, emit) async {
+      emit(state.copyWith(isLoading: true));
 
-    final List<RecipeModel> recipes = recipeListResponse.recipe
-        .map(
-          (Recipe recipe) => RecipeModel(
-            id: recipe.id,
-            title: recipe.title,
-            subtitle: recipe.subtitle,
-            imagesUrl: recipe.images
-                .map((image) => '${Enviroment.uploadsUrl}${image.url}')
-                .toList(),
-            ingredients: [], //En este punto no traigo los ingredientes todavía
-            categories: recipe.categories
-                .map(
-                  (RecipeCategory category) => CategoryModel(
-                    name: category.name,
-                    imageUrl: null,
-                    id: null,
-                    groupId: null,
-                  ),
-                )
-                .toList(),
-            preparationSteps: [], //Idem igredientes
-          ),
-        )
-        .toList();
+      final recipeListResponse = await _recipesService.getHomeRecipeList();
 
-    add(LoadedRecipeList(recipes: recipes));
+      final List<RecipeModel> recipes = recipeListResponse.recipe
+          .map(
+            (Recipe recipe) => RecipeModel(
+              id: recipe.id,
+              title: recipe.title,
+              subtitle: recipe.subtitle,
+              imagesUrl: recipe.images
+                  .map((image) => '${Enviroment.uploadsUrl}${image.url}')
+                  .toList(),
+              ingredients: [],
+              categories: recipe.categories
+                  .map(
+                    (RecipeCategory category) => CategoryModel(
+                      name: category.name,
+                      imageUrl: null,
+                      id: null,
+                      groupId: null,
+                    ),
+                  )
+                  .toList(),
+              preparationSteps: [],
+            ),
+          )
+          .toList();
+
+      emit(state.copyWith(recipes: recipes, isLoading: false));
+    });
   }
 
   Future<void> getRecipeDetail(int recipeId) async {

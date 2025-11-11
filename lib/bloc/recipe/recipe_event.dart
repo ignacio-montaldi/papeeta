@@ -36,3 +36,5 @@ class LoadedRecipeByCategoryList extends RecipeEvent {
 
   const LoadedRecipeByCategoryList({required this.recipesByCategory});
 }
+
+class LoadHomeRecipes extends RecipeEvent {}

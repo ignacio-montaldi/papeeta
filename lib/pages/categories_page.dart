@@ -36,42 +36,38 @@ class _CategoriesPageState extends State<CategoriesPage> {
           },
         ),
       ),
-      body: Padding(
-        padding: EdgeInsetsGeometry.only(top: 20),
-        child: BlocBuilder<CategoryBloc, CategoryState>(
-          builder: (context, state) {
-            final categories = state.categories;
-            final groups = state.groups;
+      body: BlocBuilder<CategoryBloc, CategoryState>(
+        builder: (context, state) {
+          final categories = state.categories;
+          final groups = state.groups;
 
-            if (categories == null || groups == null) {
-              return const Center(child: CircularProgressIndicator());
-            }
+          if (categories == null || groups == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            if (categories.isEmpty && groups.isEmpty) {
-              return const Center(
-                child: Text('No se encontraron categorías ni grupos.'),
-              );
-            }
-
-            return ListView(
-              children: [
-                if (groups.isNotEmpty) _GroupsList(groups: groups),
-                const SizedBox(height: 20),
-                if (categories.isNotEmpty)
-                  _CategoryGrid(
-                    categories: categories,
-                    categoryBloc: categoryBloc,
-                  )
-                else
-                  const Center(
-                    child: Text(
-                      'No se encontraron categorías para este grupo.',
-                    ),
-                  ),
-              ],
+          if (categories.isEmpty && groups.isEmpty) {
+            return const Center(
+              child: Text('No se encontraron categorías ni grupos.'),
             );
-          },
-        ),
+          }
+
+          return ListView(
+            padding: EdgeInsets.only(top: 20),
+            children: [
+              if (groups.isNotEmpty) _GroupsList(groups: groups),
+              const SizedBox(height: 20),
+              if (categories.isNotEmpty)
+                _CategoryGrid(
+                  categories: categories,
+                  categoryBloc: categoryBloc,
+                )
+              else
+                const Center(
+                  child: Text('No se encontraron categorías para este grupo.'),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -99,7 +95,7 @@ class _CategoryGrid extends StatelessWidget {
         crossAxisCount: 2,
         mainAxisSpacing: 15,
         crossAxisSpacing: 15,
-        mainAxisExtent: 200,
+        mainAxisExtent: 150,
       ),
       padding: EdgeInsets.only(bottom: 20.0, left: 20, right: 20),
       itemCount: filteredCategories.length,
@@ -135,14 +131,14 @@ class _CategoryGrid extends StatelessWidget {
                   child: categoryImageUrl != null
                       ? MyImageWidget(
                           image: MyImageModel(url: categoryImageUrl),
-                          width: double.infinity,
+                          height: 60,
                           fit: BoxFit.cover,
                         )
                       : Icon(Icons.broken_image, color: Colors.grey),
                 ),
                 SizedBox(height: 10),
                 Padding(
-                  padding: EdgeInsetsGeometry.symmetric(horizontal: 20),
+                  padding: EdgeInsetsGeometry.symmetric(horizontal: 15),
                   child: Text(
                     categoryName,
                     textAlign: TextAlign.center,
@@ -185,12 +181,11 @@ class _GroupsListState extends State<_GroupsList> {
     final groups = widget.groups;
 
     return SizedBox(
-      height: 156,
-      child: ListView.separated(
+      height: 118,
+      child: ListView.builder(
         itemCount: groups.length + 1,
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        separatorBuilder: (context, index) => const SizedBox(width: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 15),
         itemBuilder: (context, index) {
           final bool isSelected = selectedIndex == index;
 
@@ -267,13 +262,13 @@ class _GroupItem extends StatelessWidget {
                     )
                   : null,
               child: CircleAvatar(
-                radius: 50,
+                radius: 35,
                 backgroundColor: Colors.white,
                 child: imageUrl != null
                     ? MyImageWidget(
                         image: MyImageModel(url: imageUrl!),
-                        width: 65,
-                        height: 65,
+                        width: 45,
+                        height: 45,
                       )
                     : Icon(icon, color: Colors.black54, size: 40),
               ),
@@ -282,8 +277,13 @@ class _GroupItem extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         SizedBox(
-          width: 110,
-          child: Text(label, maxLines: 2, textAlign: TextAlign.center),
+          width: 88,
+          child: Text(
+            label,
+            maxLines: 2,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          ),
         ),
       ],
     );

@@ -34,6 +34,24 @@ class CategoryBloc extends Bloc<CategoryEvent, CategoryState> {
     on<FilterByGroup>(
       (event, emit) => emit(state.copyWith(groupId: event.groupId)),
     );
+
+    on<LoadHomeCategoriesList>((event, emit) async {
+      final categoriesListResponse = await _categoriesService
+          .getCategoriesList();
+
+      final List<CategoryModel> categories = categoriesListResponse.categories
+          .map(
+            (Category category) => CategoryModel(
+              id: category.id,
+              name: category.name,
+              imageUrl: '${Enviroment.uploadsUrl}${category.imageUrl}',
+              groupId: category.groupId,
+            ),
+          )
+          .toList();
+
+      emit(state.copyWith(categories: categories, isLoading: false));
+    });
   }
 
   Future<void> getCategoriesList() async {

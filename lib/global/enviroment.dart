@@ -1,11 +1,7 @@
-import 'dart:io';
-
 class Enviroment {
-  static String apiUrl = Platform.isAndroid
-      ? 'http://localhost:3000/api'
-      : 'http://localhost:3000/api';
+  static String baseUrl = "https://allowing-starling-heroic.ngrok-free.app";
 
-  static String uploadsUrl = Platform.isAndroid
-      ? 'http://localhost:3000'
-      : 'http://localhost:3000';
+  static String apiUrl = '$baseUrl/api';
+
+  static String uploadsUrl = baseUrl;
 }

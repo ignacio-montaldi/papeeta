@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -127,49 +129,80 @@ class _AppBarBody extends StatefulWidget {
 class _AppBarBodyState extends State<_AppBarBody> {
   int currentIndex = 0;
 
+  bool needsSecondLine(String title) {
+    final textSpan = TextSpan(
+      text: title,
+      style: TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.bold,
+        fontSize: 18,
+      ),
+    );
+    final tp = TextPainter(text: textSpan, textDirection: TextDirection.ltr);
+    tp.layout();
+    final screenWidth = MediaQuery.of(context).size.width;
+    return tp.width >
+        screenWidth -
+            80; // number is horizontal padding value for the actual widget
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<String> images = widget.selectedRecipe.imagesUrl;
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        // constraints.maxHeight varía entre toolbarHeight y expandedHeight
         final double currentHeight = constraints.maxHeight;
-        double maxHeight = widget.appBarExpandedHeight;
-        const double minHeight = kToolbarHeight + 20; // altura mínima aprox.
+        final double maxHeight = widget.appBarExpandedHeight;
+        const double minHeight =
+            kToolbarHeight + 20; // coincidir con tu cálculo
         final double t = ((currentHeight - minHeight) / (maxHeight - minHeight))
             .clamp(0.0, 1.0);
 
-        final double bottomPadding = 10.0 * t;
         return FlexibleSpaceBar(
-          title: Padding(
-            padding: EdgeInsets.only(bottom: bottomPadding),
-            child: Text(
-              widget.selectedRecipe.title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
+          collapseMode: CollapseMode.parallax, // o CollapseMode.pin
+          stretchModes: const [StretchMode.zoomBackground],
+          titlePadding: EdgeInsets.lerp(
+            EdgeInsets.only(
+              left: 60,
+              bottom: needsSecondLine(widget.selectedRecipe.title) ? 8 : 15,
+              right: 16,
+            ), // colapsado
+            const EdgeInsets.only(left: 16, bottom: 32, right: 16), // expandido
+            t,
+          ),
+          title: Text(
+            widget.selectedRecipe.title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
             ),
           ),
           background: Stack(
             fit: StackFit.expand,
             children: [
-              CarouselSlider.builder(
-                itemCount: images.length,
-                itemBuilder: (context, index, realIndex) {
-                  final imageUrl = images[index];
-                  return MyImageWidget(
-                    image: MyImageModel(url: imageUrl),
-                    fit: BoxFit.cover,
-                  );
-                },
-                options: CarouselOptions(
-                  height: double.infinity,
-                  viewportFraction: 1.0,
-                  scrollPhysics: const BouncingScrollPhysics(),
-                  onPageChanged: (index, reason) {
-                    setState(() => currentIndex = index);
+              SizedBox.expand(
+                child: CarouselSlider.builder(
+                  itemCount: images.length,
+                  itemBuilder: (context, index, realIndex) {
+                    final imageUrl = images[index];
+                    return SizedBox.expand(
+                      child: MyImageWidget(
+                        image: MyImageModel(url: imageUrl),
+                        fit: BoxFit.cover,
+                      ),
+                    );
                   },
+                  options: CarouselOptions(
+                    height: double.infinity,
+                    viewportFraction: 1.0,
+                    scrollPhysics: const BouncingScrollPhysics(),
+                    onPageChanged: (index, reason) {
+                      setState(() => currentIndex = index);
+                    },
+                  ),
                 ),
               ),
               // capa de gradiente
@@ -279,7 +312,10 @@ class _IngredientList extends StatelessWidget {
           if (ingredient.ammount != null && ingredient.ammount != 0) {
             boldText += formatDouble(ingredient.ammount ?? 0);
           }
-          boldText += ingredient.measure ?? '';
+
+          if (ingredient.measure != null) {
+            boldText += ' ${ingredient.measure!}';
+          }
 
           if (ingredient.ammount != null && ingredient.ammount != 0) {
             regularText += ' ';

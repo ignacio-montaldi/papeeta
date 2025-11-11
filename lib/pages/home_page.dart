@@ -16,25 +16,27 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final RefreshController _refreshController = RefreshController(
-    initialRefresh: false,
-  );
+  final RefreshController _refreshController = RefreshController();
 
   @override
   void initState() {
     super.initState();
-
-    final recipeBloc = BlocProvider.of<RecipeBloc>(context, listen: false);
-    final categoryBloc = BlocProvider.of<CategoryBloc>(context, listen: false);
+    final recipeBloc = context.read<RecipeBloc>();
+    final categoryBloc = context.read<CategoryBloc>();
 
     if (recipeBloc.state.recipes == null || recipeBloc.state.recipes!.isEmpty) {
-      recipeBloc.getHomeRecipesList();
+      recipeBloc.add(LoadHomeRecipes());
     }
 
     if (categoryBloc.state.categories == null ||
         categoryBloc.state.categories!.isEmpty) {
-      categoryBloc.getCategoriesList();
+      categoryBloc.add(LoadHomeCategoriesList());
     }
+  }
+
+  void _onRefresh() {
+    context.read<RecipeBloc>().add(LoadHomeRecipes());
+    context.read<CategoryBloc>().add(LoadHomeCategoriesList());
   }
 
   @override
@@ -53,100 +55,113 @@ class _HomePageState extends State<HomePage> {
         leading: Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu, color: Colors.white),
-            onPressed: () {
-              Scaffold.of(context).openDrawer();
-            },
+            onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
         automaticallyImplyLeading: false,
       ),
       drawer: CustomDrawer(),
-      body: SmartRefresher(
-        controller: _refreshController,
-        enablePullDown: true,
-        onRefresh: _recargar,
-        child: _MainView(),
-      ),
-    );
-  }
+      body: MultiBlocListener(
+        listeners: [
+          // 🔹 Cuando cambian recetas o categorías, se completa el refresh
+          BlocListener<RecipeBloc, RecipeState>(
+            listener: (context, state) {
+              if (state.recipes != null) {
+                _refreshController.refreshCompleted();
+              }
+            },
+          ),
+          BlocListener<CategoryBloc, CategoryState>(
+            listener: (context, state) {
+              if (state.categories != null) {
+                _refreshController.refreshCompleted();
+              }
+            },
+          ),
+        ],
+        child: BlocBuilder<RecipeBloc, RecipeState>(
+          builder: (context, recipeState) {
+            return BlocBuilder<CategoryBloc, CategoryState>(
+              builder: (context, categoryState) {
+                final recipes = recipeState.recipes;
+                final categories = categoryState.categories;
 
-  Future<void> _recargar() async {
-    final recipeBloc = BlocProvider.of<RecipeBloc>(context, listen: false);
-    final categoryBloc = BlocProvider.of<CategoryBloc>(context, listen: false);
-    await recipeBloc.getHomeRecipesList();
-    await categoryBloc.getCategoriesList();
-    _refreshController.refreshCompleted();
-  }
-}
+                if (recipes == null || categories == null) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-class _MainView extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<RecipeBloc, RecipeState>(
-      builder: (context, recipeState) {
-        return BlocBuilder<CategoryBloc, CategoryState>(
-          builder: (context, categoryState) {
-            final recipes = recipeState.recipes;
-            final categories = categoryState.categories;
+                if (recipes.isEmpty && categories.isEmpty) {
+                  return const Center(
+                    child: Text('No se encontraron recetas ni categorías.'),
+                  );
+                }
 
-            if (recipes == null || categories == null) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (recipes.isEmpty && categories.isEmpty) {
-              return const Center(
-                child: Text('No se encontraron recetas ni categorías.'),
-              );
-            }
-
-            return ListView(
-              padding: const EdgeInsets.only(top: 20),
-              physics: const BouncingScrollPhysics(),
-              children: [
-                if (categories.isNotEmpty)
-                  _CategoriesList(categories: categories),
-                const SizedBox(height: 20),
-                if (recipes.isNotEmpty)
-                  RecipeList(recipes: recipes)
-                else
-                  const Center(child: Text('No se encontraron recetas.')),
-              ],
+                return SmartRefresher(
+                  controller: _refreshController,
+                  enablePullDown: true,
+                  onRefresh: _onRefresh,
+                  physics: const BouncingScrollPhysics(),
+                  child: ListView(
+                    padding: const EdgeInsets.only(top: 20),
+                    children: [
+                      if (categories.isNotEmpty)
+                        _CategoriesList(categories: categories),
+                      const SizedBox(height: 20),
+                      if (recipes.isNotEmpty)
+                        RecipeList(recipes: recipes)
+                      else
+                        const Center(child: Text('No se encontraron recetas.')),
+                    ],
+                  ),
+                );
+              },
             );
           },
-        );
-      },
+        ),
+      ),
     );
   }
 }
 
 class _CategoriesList extends StatefulWidget {
   const _CategoriesList({required this.categories});
-
   final List<CategoryModel> categories;
+
   @override
   State<_CategoriesList> createState() => _CategoriesListState();
 }
 
 class _CategoriesListState extends State<_CategoriesList> {
-  late final List<CategoryModel> limitedCategories;
+  late List<CategoryModel> limitedCategories;
+
   @override
   void initState() {
-    limitedCategories =
-        (widget.categories.where((c) => c.groupId != 2).toList()..shuffle())
-            .take(8)
-            .toList();
     super.initState();
+    _shuffleCategories();
+  }
+
+  @override
+  void didUpdateWidget(covariant _CategoriesList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.categories != widget.categories) {
+      _shuffleCategories();
+    }
+  }
+
+  void _shuffleCategories() {
+    final filtered = widget.categories.where((c) => c.groupId != 2).toList();
+    filtered.shuffle();
+    limitedCategories = filtered.take(8).toList();
   }
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 150,
-      child: ListView.separated(
+      height: 114,
+      child: ListView.builder(
         itemCount: limitedCategories.length + 1,
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        separatorBuilder: (context, index) => const SizedBox(width: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 15),
         itemBuilder: (context, index) {
           if (index < limitedCategories.length) {
             return _CategoryItem(
@@ -173,6 +188,7 @@ class _CategoryItem extends StatelessWidget {
     this.icon,
     this.category,
   });
+
   final CategoryModel? category;
   final String label;
   final String? imageUrl;
@@ -180,7 +196,7 @@ class _CategoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final categoryBloc = BlocProvider.of<CategoryBloc>(context, listen: false);
+    final categoryBloc = context.read<CategoryBloc>();
     return Column(
       children: [
         GestureDetector(
@@ -205,22 +221,27 @@ class _CategoryItem extends StatelessWidget {
               ],
             ),
             child: CircleAvatar(
-              radius: 50,
+              radius: 35,
               backgroundColor: Colors.white,
               child: imageUrl != null
                   ? MyImageWidget(
                       image: MyImageModel(url: imageUrl!),
-                      width: 65,
-                      height: 65,
+                      width: 45,
+                      height: 45,
                     )
-                  : Icon(icon, color: Colors.black54, size: 40),
+                  : Icon(icon, color: Colors.black54, size: 30),
             ),
           ),
         ),
         const SizedBox(height: 10),
         SizedBox(
-          width: 110,
-          child: Text(label, maxLines: 2, textAlign: TextAlign.center),
+          width: 88,
+          child: Text(
+            label,
+            maxLines: 2,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          ),
         ),
       ],
     );

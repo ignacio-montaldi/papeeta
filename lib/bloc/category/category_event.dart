@@ -13,6 +13,10 @@ class LoadedHomeCategoryList extends CategoryEvent {
   const LoadedHomeCategoryList({required this.categories});
 }
 
+class LoadHomeCategoriesList extends CategoryEvent {
+  const LoadHomeCategoriesList();
+}
+
 class LoadedCategoryList extends CategoryEvent {
   final List<CategoryModel> categories;
 

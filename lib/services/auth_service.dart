@@ -88,21 +88,26 @@ class AuthService with ChangeNotifier {
   }
 
   Future<bool> isLoggedIn() async {
-    final token = await _storage.read(key: 'token') ?? '';
+    try {
+      final token = await _storage.read(key: 'token');
+      if (token == null) return false;
 
-    final uri = Uri.parse('${Enviroment.apiUrl}/login/renew');
-    final resp = await http.get(
-      uri,
-      headers: {'Content-Type': 'application/json', 'x-token': token},
-    );
+      final resp = await http.get(
+        Uri.parse('${Enviroment.apiUrl}/auth/renew'),
+        headers: {'x-token': token},
+      );
 
-    if (resp.statusCode == 200) {
-      final loginResponse = loginResponseFromJson(resp.body);
-      usuario = loginResponse.usuario;
-      await _guardarToken(loginResponse.token);
-      return true;
-    } else {
-      logout();
+      if (resp.statusCode == 200) {
+        final loginResponse = loginResponseFromJson(resp.body);
+        usuario = loginResponse.usuario;
+        await _guardarToken(loginResponse.token);
+        return true;
+      } else {
+        logout();
+        return false;
+      }
+    } catch (e) {
+      debugPrint('❌ Error en isLoggedIn: $e');
       return false;
     }
   }

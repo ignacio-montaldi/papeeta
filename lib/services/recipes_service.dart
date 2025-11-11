@@ -14,7 +14,7 @@ class RecipesService {
   Future<RecipeListResponse> getHomeRecipeList() async {
     final url = "$_baseRecipesUrl/random";
 
-    final resp = await _dio.get(url, queryParameters: {'limit': 10, 'page': 1});
+    final resp = await _dio.get(url, queryParameters: {'limit': 20, 'page': 1});
 
     final data = RecipeListResponse.fromJson(resp.data);
 
