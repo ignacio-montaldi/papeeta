@@ -93,7 +93,7 @@ class AuthService with ChangeNotifier {
       if (token == null) return false;
 
       final resp = await http.get(
-        Uri.parse('${Enviroment.apiUrl}/auth/renew'),
+        Uri.parse('${Enviroment.apiUrl}/login/renew'),
         headers: {'x-token': token},
       );
 
