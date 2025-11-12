@@ -11,10 +11,10 @@ String usuarioToJson(UsuarioModel data) => json.encode(data.toJson());
 
 class UsuarioModel {
   String nombre;
-  String email;
+  String? email;
   String uid;
 
-  UsuarioModel({required this.nombre, required this.email, required this.uid});
+  UsuarioModel({required this.nombre, this.email, required this.uid});
 
   factory UsuarioModel.fromJson(Map<String, dynamic> json) => UsuarioModel(
     nombre: json["nombre"],

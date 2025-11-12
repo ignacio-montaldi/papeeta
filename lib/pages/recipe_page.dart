@@ -78,6 +78,8 @@ class RecipePage extends StatelessWidget {
                         _SectionTitle(title: 'Fuente'),
                         SizedBox(height: 5),
                         _Link(link: selectedRecipe.link),
+                        SizedBox(height: 10),
+                        _AuthorWidget(author: selectedRecipe.author!),
                       ],
                     ),
                   ),
@@ -88,31 +90,6 @@ class RecipePage extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _Link extends StatelessWidget {
-  const _Link({required this.link});
-
-  final String? link;
-
-  @override
-  Widget build(BuildContext context) {
-    return link != null
-        ? GestureDetector(
-            onTap: () => launchUrl(link!),
-            child: Text(
-              link!,
-              style: TextStyle(
-                color: Colors.blue,
-                decoration: TextDecoration.underline,
-                decorationColor: Colors.blue,
-              ),
-            ),
-          )
-        : Text(
-            "Parece que esta es una receta original, recuerda agradecerle a quien te la envió 😊",
-          );
   }
 }
 
@@ -319,9 +296,7 @@ class _IngredientList extends StatelessWidget {
           if (ingredient.measure != null) {
             boldText += ' ${ingredient.measure!}';
           }
-          if (ingredient.measure != null &&
-              ingredient.measure != null &&
-              ingredient.ammount != 1) {
+          if (ingredient.measure != null && ingredient.ammount != 1) {
             boldText += 's';
           }
 
@@ -388,6 +363,52 @@ class _PreparationStepsList extends StatelessWidget {
             ],
           );
         }),
+      ],
+    );
+  }
+}
+
+class _Link extends StatelessWidget {
+  const _Link({required this.link});
+
+  final String? link;
+
+  @override
+  Widget build(BuildContext context) {
+    return link != null
+        ? GestureDetector(
+            onTap: () => launchUrl(link!),
+            child: Text(
+              link!,
+              style: TextStyle(
+                color: Colors.blue,
+                decoration: TextDecoration.underline,
+                decorationColor: Colors.blue,
+              ),
+            ),
+          )
+        : Text(
+            "Parece que esta es una receta original, recuerda agradecerle a quien te la envió 😊",
+          );
+  }
+}
+
+class _AuthorWidget extends StatelessWidget {
+  const _AuthorWidget({required this.author});
+
+  final UsuarioModel author;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        CircleAvatar(
+          backgroundColor: Theme.of(context).colorScheme.onSecondary,
+          radius: 18,
+          child: Text(author.nombre[0], style: TextStyle(color: Colors.white)),
+        ),
+        SizedBox(width: 10),
+        Text("agregada por ${author.nombre}", style: TextStyle(fontSize: 15)),
       ],
     );
   }

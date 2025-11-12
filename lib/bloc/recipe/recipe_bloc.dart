@@ -110,6 +110,10 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
                 .toList()
           : [],
       link: recipeResponse.recipe.link,
+      author: UsuarioModel(
+        nombre: recipeResponse.recipe.author!.nombre,
+        uid: recipeResponse.recipe.author!.id,
+      ),
     );
 
     add(SelectedRecipeDetailLoaded(recipe: recipe));
