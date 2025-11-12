@@ -58,6 +58,7 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
                   )
                   .toList(),
               preparationSteps: [],
+              link: recipe.link,
             ),
           )
           .toList();
@@ -108,6 +109,7 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
                 )
                 .toList()
           : [],
+      link: recipeResponse.recipe.link,
     );
 
     add(SelectedRecipeDetailLoaded(recipe: recipe));
@@ -139,6 +141,7 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
                 )
                 .toList(),
             preparationSteps: [], //Idem igredientes
+            link: recipe.link,
           ),
         )
         .toList();

@@ -181,7 +181,7 @@ class _GroupsListState extends State<_GroupsList> {
     final groups = widget.groups;
 
     return SizedBox(
-      height: 118,
+      height: 120,
       child: ListView.builder(
         itemCount: groups.length + 1,
         scrollDirection: Axis.horizontal,

@@ -35,6 +35,7 @@ class Recipe {
   final List<Ingredient>? ingredients;
   final List<PreparationStep>? preparationSteps;
   final List<RecipeCategory> categories;
+  final String? link;
 
   Recipe({
     required this.id,
@@ -46,6 +47,7 @@ class Recipe {
     this.ingredients,
     this.preparationSteps,
     required this.categories,
+    this.link,
   });
 
   factory Recipe.fromRawJson(String str) => Recipe.fromJson(json.decode(str));
@@ -72,6 +74,7 @@ class Recipe {
     categories: List<RecipeCategory>.from(
       json["categories"].map((x) => RecipeCategory.fromJson(x)),
     ),
+    link: json["link"],
   );
 
   Map<String, dynamic> toJson() => {
@@ -88,6 +91,7 @@ class Recipe {
         ? []
         : List<dynamic>.from(preparationSteps!.map((x) => x.toJson())),
     "categories": List<dynamic>.from(categories.map((x) => x.toJson())),
+    "link": link,
   };
 }
 

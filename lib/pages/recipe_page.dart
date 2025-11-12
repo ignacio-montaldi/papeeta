@@ -1,11 +1,10 @@
-import 'dart:ui';
-
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:papeeta/bloc/recipe/recipe_bloc.dart';
-import 'package:papeeta/helpers/formatters.dart';
+import 'package:papeeta/helpers/helpers.dart';
 import 'package:papeeta/models/models.dart';
+import 'package:papeeta/models/response/preparation_step_model.dart';
 import 'package:papeeta/widgets/my_image_widget.dart';
 
 class RecipePage extends StatelessWidget {
@@ -71,35 +70,14 @@ class RecipePage extends StatelessWidget {
                         ),
                         SizedBox(height: 10),
                         _SectionTitle(title: 'Preparación'),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ...selectedRecipe.preparationSteps.map((step) {
-                              return Column(
-                                children: [
-                                  RichText(
-                                    text: TextSpan(
-                                      style: TextStyle(
-                                        color: Colors.black54,
-                                        fontSize: 15,
-                                      ),
-                                      children: <TextSpan>[
-                                        TextSpan(
-                                          text: '${step.stepNumber}. ',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        TextSpan(text: step.description),
-                                      ],
-                                    ),
-                                  ),
-                                  SizedBox(height: 5),
-                                ],
-                              );
-                            }),
-                          ],
+                        SizedBox(height: 5),
+                        _PreparationStepsList(
+                          preparationSteps: selectedRecipe.preparationSteps,
                         ),
+                        SizedBox(height: 10),
+                        _SectionTitle(title: 'Fuente'),
+                        SizedBox(height: 5),
+                        _Link(link: selectedRecipe.link),
                       ],
                     ),
                   ),
@@ -110,6 +88,31 @@ class RecipePage extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _Link extends StatelessWidget {
+  const _Link({required this.link});
+
+  final String? link;
+
+  @override
+  Widget build(BuildContext context) {
+    return link != null
+        ? GestureDetector(
+            onTap: () => launchUrl(link!),
+            child: Text(
+              link!,
+              style: TextStyle(
+                color: Colors.blue,
+                decoration: TextDecoration.underline,
+                decorationColor: Colors.blue,
+              ),
+            ),
+          )
+        : Text(
+            "Parece que esta es una receta original, recuerda agradecerle a quien te la envió 😊",
+          );
   }
 }
 
@@ -316,6 +319,11 @@ class _IngredientList extends StatelessWidget {
           if (ingredient.measure != null) {
             boldText += ' ${ingredient.measure!}';
           }
+          if (ingredient.measure != null &&
+              ingredient.measure != null &&
+              ingredient.ammount != 1) {
+            boldText += 's';
+          }
 
           if (ingredient.ammount != null && ingredient.ammount != 0) {
             regularText += ' ';
@@ -340,6 +348,39 @@ class _IngredientList extends StatelessWidget {
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     TextSpan(text: regularText),
+                  ],
+                ),
+              ),
+              SizedBox(height: 5),
+            ],
+          );
+        }),
+      ],
+    );
+  }
+}
+
+class _PreparationStepsList extends StatelessWidget {
+  final List<PreparationStepModel> preparationSteps;
+  const _PreparationStepsList({required this.preparationSteps});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ...preparationSteps.map((step) {
+          return Column(
+            children: [
+              RichText(
+                text: TextSpan(
+                  style: TextStyle(color: Colors.black54, fontSize: 15),
+                  children: <TextSpan>[
+                    TextSpan(
+                      text: '${step.stepNumber}. ',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    TextSpan(text: step.description),
                   ],
                 ),
               ),

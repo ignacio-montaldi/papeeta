@@ -9,6 +9,7 @@ class RecipeModel {
   final List<IngredientModel> ingredients;
   final List<CategoryModel> categories;
   final List<PreparationStepModel> preparationSteps;
+  final String? link;
 
   RecipeModel({
     required this.id,
@@ -18,5 +19,6 @@ class RecipeModel {
     required this.ingredients,
     required this.categories,
     required this.preparationSteps,
+    this.link,
   });
 }
