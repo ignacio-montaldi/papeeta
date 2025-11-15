@@ -25,6 +25,10 @@ class MyApp extends StatelessWidget {
             create: (context) =>
                 CategoryBloc(categoriesService: CategoriesService()),
           ),
+          BlocProvider(
+            create: (context) =>
+                IngredientBloc(ingredientService: IngredientService()),
+          ),
         ],
         child: MaterialApp(
           debugShowCheckedModeBanner: false,

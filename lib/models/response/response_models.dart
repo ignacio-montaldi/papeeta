@@ -1,4 +1,4 @@
-export 'package:papeeta/models/response/categories_list_model.dart';
+export 'package:papeeta/models/response/categories_list_response_model.dart';
 export 'package:papeeta/models/response/category_group_response_model.dart';
 export 'package:papeeta/models/response/login_response_model.dart';
 export 'package:papeeta/models/response/preparation_step_model.dart';

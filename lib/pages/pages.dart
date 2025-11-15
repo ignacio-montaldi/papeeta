@@ -1,3 +1,4 @@
+export 'package:papeeta/pages/add_recipe_page.dart';
 export 'package:papeeta/pages/categories_page.dart';
 export 'package:papeeta/pages/home_page.dart';
 export 'package:papeeta/pages/loading_page.dart';

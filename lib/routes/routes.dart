@@ -9,4 +9,5 @@ final Map<String, Widget Function(BuildContext)> appRoutes = {
   'recipe': (_) => const RecipePage(),
   'categories': (_) => CategoriesPage(),
   'recipeList': (_) => const RecipeListPage(),
+  'addRecipe': (_) => const AddRecipePage(),
 };

@@ -61,9 +61,15 @@ class _HomePageState extends State<HomePage> {
         automaticallyImplyLeading: false,
       ),
       drawer: CustomDrawer(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.pushNamed(context, 'addRecipe');
+        },
+        backgroundColor: Theme.of(context).colorScheme.onPrimary,
+        child: Icon(Icons.post_add, color: Colors.white),
+      ),
       body: MultiBlocListener(
         listeners: [
-          // 🔹 Cuando cambian recetas o categorías, se completa el refresh
           BlocListener<RecipeBloc, RecipeState>(
             listener: (context, state) {
               if (state.recipes != null) {
