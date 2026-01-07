@@ -1,5 +1,4 @@
 import 'package:papeeta/models/models.dart';
-import 'package:papeeta/models/response/response_models.dart';
 
 class RecipeModel {
   final int id;

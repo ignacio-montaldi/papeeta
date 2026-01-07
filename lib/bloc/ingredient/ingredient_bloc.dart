@@ -20,17 +20,27 @@ class IngredientBloc extends Bloc<IngredientEvent, IngredientState> {
     emit(IngredientLoading());
 
     try {
-      List<IngredientUnitModel> units = (await _ingredientService.getUnits())
-          .units
-          .map(
-            (unit) => IngredientUnitModel(
-              id: unit.id,
-              displayName: unit.displayName,
-              type: unit.type,
-              unitKey: unit.unitKey,
-            ),
-          )
-          .toList();
+      List<IngredientUnitModel> units = [
+        IngredientUnitModel(
+          id: 0,
+          displayName: '(Vacío)',
+          unitKey: '',
+          type: 'unidades',
+        ),
+      ];
+
+      units.addAll(
+        (await _ingredientService.getUnits()).units
+            .map(
+              (unit) => IngredientUnitModel(
+                id: unit.id,
+                displayName: unit.displayName,
+                type: unit.type,
+                unitKey: unit.unitKey,
+              ),
+            )
+            .toList(),
+      );
 
       emit(IngredientUnitsLoaded(units));
     } catch (e) {

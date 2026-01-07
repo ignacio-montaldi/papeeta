@@ -1,9 +1,11 @@
 class IngredientModel {
-  final double? ammount;
-  final String? measure;
-  final String name;
+  int? tempId; // ID SOLO para Flutter
+  double? ammount;
+  String? measure;
+  String name;
 
   IngredientModel({
+    this.tempId,
     required this.ammount,
     required this.measure,
     required this.name,

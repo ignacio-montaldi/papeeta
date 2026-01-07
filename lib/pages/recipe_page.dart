@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:papeeta/bloc/recipe/recipe_bloc.dart';
 import 'package:papeeta/helpers/helpers.dart';
 import 'package:papeeta/models/models.dart';
-import 'package:papeeta/models/response/preparation_step_model.dart';
 import 'package:papeeta/widgets/my_image_widget.dart';
 
 class RecipePage extends StatelessWidget {
