@@ -36,8 +36,11 @@ class Group {
 
   String toRawJson() => json.encode(toJson());
 
-  factory Group.fromJson(Map<String, dynamic> json) =>
-      Group(id: json["id"], name: json["name"], imageUrl: json["image_url"]);
+  factory Group.fromJson(Map<String, dynamic> json) => Group(
+    id: json["id"],
+    name: json["name"],
+    imageUrl: json["image_url"] ?? "",
+  );
 
   Map<String, dynamic> toJson() => {
     "id": id,

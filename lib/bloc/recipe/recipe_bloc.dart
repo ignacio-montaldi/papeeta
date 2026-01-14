@@ -43,8 +43,12 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
               id: recipe.id,
               title: recipe.title,
               subtitle: recipe.subtitle,
-              imagesUrl: recipe.images
-                  .map((image) => '${Enviroment.uploadsUrl}${image.url}')
+              images: recipe.images
+                  .map(
+                    (image) => MyImageModel(
+                      url: '${Enviroment.uploadsUrl}${image.url}',
+                    ),
+                  )
                   .toList(),
               ingredients: [],
               categories: recipe.categories
@@ -54,6 +58,7 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
                       imageUrl: null,
                       id: null,
                       groupId: null,
+                      group: null,
                     ),
                   )
                   .toList(),
@@ -75,15 +80,25 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
       id: recipeResponse.recipe.id,
       title: recipeResponse.recipe.title,
       subtitle: recipeResponse.recipe.subtitle,
-      imagesUrl: recipeResponse.recipe.images
-          .map((image) => '${Enviroment.uploadsUrl}${image.url}')
+      images: recipeResponse.recipe.images
+          .map(
+            (image) =>
+                MyImageModel(url: '${Enviroment.uploadsUrl}${image.url}'),
+          )
           .toList(),
       ingredients: recipeResponse.recipe.ingredients != null
           ? recipeResponse.recipe.ingredients!
                 .map(
                   (ingredient) => IngredientModel(
-                    ammount: ingredient.amount,
-                    measure: ingredient.measure,
+                    amount: ingredient.amount,
+                    measure: ingredient.measureUnit != null
+                        ? IngredientUnitModel(
+                            id: ingredient.measureUnit!.id,
+                            unitKey: ingredient.measureUnit!.unitKey,
+                            displayName: ingredient.measureUnit!.displayName,
+                            type: ingredient.measureUnit!.type,
+                          )
+                        : null,
                     name: ingredient.name,
                   ),
                 )
@@ -96,6 +111,7 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
               imageUrl: null,
               id: null,
               groupId: null,
+              group: null,
             ),
           )
           .toList(),
@@ -130,8 +146,11 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
             id: recipe.id,
             title: recipe.title,
             subtitle: recipe.subtitle,
-            imagesUrl: recipe.images
-                .map((image) => '${Enviroment.uploadsUrl}${image.url}')
+            images: recipe.images
+                .map(
+                  (image) =>
+                      MyImageModel(url: '${Enviroment.uploadsUrl}${image.url}'),
+                )
                 .toList(),
             ingredients: [], //En este punto no traigo los ingredientes todavía
             categories: recipe.categories
@@ -141,6 +160,7 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
                     imageUrl: null,
                     id: null,
                     groupId: null,
+                    group: null,
                   ),
                 )
                 .toList(),

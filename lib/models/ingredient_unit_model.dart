@@ -1,5 +1,5 @@
 class IngredientUnitModel {
-  final int id;
+  final int? id;
   final String unitKey;
   final String displayName;
   final String type;

@@ -149,15 +149,17 @@ class Image {
 
 class Ingredient {
   final double? amount;
-  final String? measure;
   final String name;
   final int position;
+  int? measureUnitId;
+  MeasureUnit? measureUnit;
 
   Ingredient({
     required this.amount,
-    required this.measure,
     required this.name,
     required this.position,
+    this.measureUnitId,
+    this.measureUnit,
   });
 
   factory Ingredient.fromRawJson(String str) =>
@@ -167,16 +169,48 @@ class Ingredient {
 
   factory Ingredient.fromJson(Map<String, dynamic> json) => Ingredient(
     amount: json["amount"]?.toDouble(),
-    measure: json["measure"],
     name: json["name"],
     position: json["position"],
+    measureUnitId: json["measure_unit_id"],
+    measureUnit: json["measureUnit"] == null
+        ? null
+        : MeasureUnit.fromJson(json["measureUnit"]),
   );
 
   Map<String, dynamic> toJson() => {
     "amount": amount,
-    "measure": measure,
     "name": name,
     "position": position,
+    "measure_unit_id": measureUnitId,
+    "measureUnit": measureUnit?.toJson(),
+  };
+}
+
+class MeasureUnit {
+  int id;
+  String unitKey;
+  String displayName;
+  String type;
+
+  MeasureUnit({
+    required this.id,
+    required this.unitKey,
+    required this.displayName,
+    required this.type,
+  });
+
+  factory MeasureUnit.fromJson(Map<String, dynamic> json) => MeasureUnit(
+    id: json["id"],
+    unitKey: json["unit_key"],
+    displayName: json["display_name"],
+    type: json["type"],
+  );
+
+  Map<String, dynamic> toJson() => {
+    "id": id,
+    "unit_key": unitKey,
+    "display_name": displayName,
+    "type": type,
   };
 }
 

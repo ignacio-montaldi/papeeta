@@ -46,6 +46,11 @@ class CategoryBloc extends Bloc<CategoryEvent, CategoryState> {
               name: category.name,
               imageUrl: '${Enviroment.uploadsUrl}${category.imageUrl}',
               groupId: category.groupId,
+              group: GroupModel(
+                id: category.group.id,
+                name: category.group.name,
+                imageUrl: category.group.imageUrl,
+              ),
             ),
           )
           .toList();
@@ -64,6 +69,11 @@ class CategoryBloc extends Bloc<CategoryEvent, CategoryState> {
             name: category.name,
             imageUrl: '${Enviroment.uploadsUrl}${category.imageUrl}',
             groupId: category.groupId,
+            group: GroupModel(
+              id: category.group.id,
+              name: category.group.name,
+              imageUrl: category.group.imageUrl,
+            ),
           ),
         )
         .toList();

@@ -4,13 +4,22 @@ class RecipeFormState {
   final String title;
   final String description;
   final String? sourceLink;
+
   final List<IngredientModel> ingredients;
   final List<PreparationStepModel> steps;
+  final List<CategoryModel> categories;
+  final List<MyImageModel> images;
 
+  final UsuarioModel? author;
+
+  // validation
   final Map<String, String> errors;
   final bool isValid;
 
-  final List<File> images;
+  // submit lifecycle
+  final bool isSubmitting;
+  final bool submitSuccess;
+  final String? submitError;
 
   const RecipeFormState({
     this.title = '',
@@ -18,9 +27,16 @@ class RecipeFormState {
     this.sourceLink,
     this.ingredients = const [],
     this.steps = const [],
+    this.categories = const [],
+    this.images = const [],
+    this.author,
+
     this.errors = const {},
     this.isValid = false,
-    this.images = const [],
+
+    this.isSubmitting = false,
+    this.submitSuccess = false,
+    this.submitError,
   });
 
   RecipeFormState copyWith({
@@ -29,9 +45,16 @@ class RecipeFormState {
     String? sourceLink,
     List<IngredientModel>? ingredients,
     List<PreparationStepModel>? steps,
+    List<CategoryModel>? categories,
+    List<MyImageModel>? images,
+    UsuarioModel? author,
+
     Map<String, String>? errors,
     bool? isValid,
-    List<File>? images,
+
+    bool? isSubmitting,
+    bool? submitSuccess,
+    String? submitError,
   }) {
     return RecipeFormState(
       title: title ?? this.title,
@@ -39,9 +62,16 @@ class RecipeFormState {
       sourceLink: sourceLink ?? this.sourceLink,
       ingredients: ingredients ?? this.ingredients,
       steps: steps ?? this.steps,
+      categories: categories ?? this.categories,
+      images: images ?? this.images,
+      author: author ?? this.author,
+
       errors: errors ?? this.errors,
       isValid: isValid ?? this.isValid,
-      images: images ?? this.images,
+
+      isSubmitting: isSubmitting ?? this.isSubmitting,
+      submitSuccess: submitSuccess ?? this.submitSuccess,
+      submitError: submitError,
     );
   }
 }

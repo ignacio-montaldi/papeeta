@@ -242,6 +242,12 @@
       "languageVersion": "2.12"
     },
     {
+      "name": "flutter_speed_dial",
+      "rootUri": "file:///C:/Users/javie/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_speed_dial-7.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "flutter_test",
       "rootUri": "file:///C:/Users/javie/fvm/versions/3.32.0/packages/flutter_test",
       "packageUri": "lib/",

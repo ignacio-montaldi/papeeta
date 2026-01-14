@@ -1,12 +1,14 @@
+import 'package:papeeta/models/models.dart';
+
 class IngredientModel {
   int? tempId; // ID SOLO para Flutter
-  double? ammount;
-  String? measure;
+  double? amount;
+  IngredientUnitModel? measure;
   String name;
 
   IngredientModel({
     this.tempId,
-    required this.ammount,
+    required this.amount,
     required this.measure,
     required this.name,
   });

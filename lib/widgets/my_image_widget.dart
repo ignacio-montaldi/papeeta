@@ -26,27 +26,17 @@ class MyImageWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget imageWidget;
 
-    if (image.isLocal) {
-      // Soporte para assets o archivos locales
-      if (image.file != null) {
-        imageWidget = Image.file(
-          image.file!,
-          fit: fit,
-          width: width,
-          height: height,
-        );
-      } else {
-        imageWidget = Image.asset(
-          image.url,
-          fit: fit,
-          width: width,
-          height: height,
-        );
-      }
+    if (image.isLocal && image.file != null) {
+      imageWidget = Image.file(
+        image.file!,
+        fit: fit,
+        width: width,
+        height: height,
+      );
     } else {
       // Imágenes desde la red con caché
       imageWidget = CachedNetworkImage(
-        imageUrl: image.url,
+        imageUrl: image.url!,
         fit: fit,
         width: width,
         height: height,

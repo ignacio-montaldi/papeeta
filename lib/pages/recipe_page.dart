@@ -7,7 +7,9 @@ import 'package:papeeta/models/models.dart';
 import 'package:papeeta/widgets/my_image_widget.dart';
 
 class RecipePage extends StatelessWidget {
-  const RecipePage({super.key});
+  final RecipeModel? previewRecipe;
+
+  const RecipePage({super.key, this.previewRecipe});
 
   @override
   Widget build(BuildContext context) {
@@ -19,14 +21,24 @@ class RecipePage extends StatelessWidget {
       child: Scaffold(
         body: BlocBuilder<RecipeBloc, RecipeState>(
           builder: (context, state) {
-            RecipeModel selectedRecipe = state.selectedRecipe!;
-            if (selectedRecipe.ingredients.isEmpty ||
-                selectedRecipe.preparationSteps.isEmpty) {
-              recipeBloc.getRecipeDetail(state.selectedRecipe!.id);
-              return Center(child: CircularProgressIndicator());
+            final bool isPreview = previewRecipe != null;
+
+            // 1️⃣ Resolver receta UNA sola vez
+            final RecipeModel? recipe = isPreview
+                ? previewRecipe
+                : state.selectedRecipe;
+
+            if (recipe == null) {
+              return const Center(child: CircularProgressIndicator());
             }
 
-            selectedRecipe = state.selectedRecipe!;
+            // 2️⃣ Si es real y falta data → cargar
+            if (!isPreview &&
+                (recipe.ingredients.isEmpty ||
+                    recipe.preparationSteps.isEmpty)) {
+              recipeBloc.getRecipeDetail(recipe.id);
+              return const Center(child: CircularProgressIndicator());
+            }
 
             return CustomScrollView(
               physics: const BouncingScrollPhysics(),
@@ -35,50 +47,43 @@ class RecipePage extends StatelessWidget {
                   stretch: true,
                   pinned: true,
                   centerTitle: true,
-                  onStretchTrigger: () async {
-                    // Triggers when stretching past offset
-                    // print('Stretch');
-                  },
-                  stretchTriggerOffset: 300.0,
                   expandedHeight: appBarExpandedHeight,
                   backgroundColor: Theme.of(context).colorScheme.onPrimary,
-                  iconTheme: IconThemeData(color: Colors.white),
+                  iconTheme: const IconThemeData(color: Colors.white),
                   flexibleSpace: _AppBarBody(
-                    selectedRecipe: selectedRecipe,
+                    recipe: recipe,
                     appBarExpandedHeight: appBarExpandedHeight,
                   ),
                 ),
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsetsGeometry.all(20),
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                     child: ListView(
                       shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      padding: const EdgeInsets.all(0),
+                      physics: const NeverScrollableScrollPhysics(),
                       children: [
                         _CategoriesList(
-                          categories: selectedRecipe.categories
-                              .map((category) => category.name)
+                          categories: recipe.categories
+                              .map((c) => c.name)
                               .toList(),
                         ),
-                        SizedBox(height: 10),
-                        _SectionTitle(title: 'Ingredientes'),
-                        SizedBox(height: 5),
-                        _IngredientList(
-                          ingredients: selectedRecipe.ingredients,
-                        ),
-                        SizedBox(height: 10),
-                        _SectionTitle(title: 'Preparación'),
-                        SizedBox(height: 5),
+                        const SizedBox(height: 10),
+                        const _SectionTitle(title: 'Ingredientes'),
+                        const SizedBox(height: 5),
+                        _IngredientList(ingredients: recipe.ingredients),
+                        const SizedBox(height: 10),
+                        const _SectionTitle(title: 'Preparación'),
+                        const SizedBox(height: 5),
                         _PreparationStepsList(
-                          preparationSteps: selectedRecipe.preparationSteps,
+                          preparationSteps: recipe.preparationSteps,
                         ),
-                        SizedBox(height: 10),
-                        _SectionTitle(title: 'Fuente'),
-                        SizedBox(height: 5),
-                        _Link(link: selectedRecipe.link),
-                        SizedBox(height: 10),
-                        _AuthorWidget(author: selectedRecipe.author!),
+                        const SizedBox(height: 10),
+                        const _SectionTitle(title: 'Fuente'),
+                        const SizedBox(height: 5),
+                        _Link(link: recipe.link),
+                        const SizedBox(height: 10),
+                        if (recipe.author != null)
+                          _AuthorWidget(author: recipe.author!),
                       ],
                     ),
                   ),
@@ -93,13 +98,10 @@ class RecipePage extends StatelessWidget {
 }
 
 class _AppBarBody extends StatefulWidget {
-  final RecipeModel selectedRecipe;
+  final RecipeModel recipe;
   final double appBarExpandedHeight;
 
-  const _AppBarBody({
-    required this.selectedRecipe,
-    required this.appBarExpandedHeight,
-  });
+  const _AppBarBody({required this.recipe, required this.appBarExpandedHeight});
 
   @override
   State<_AppBarBody> createState() => _AppBarBodyState();
@@ -127,7 +129,7 @@ class _AppBarBodyState extends State<_AppBarBody> {
 
   @override
   Widget build(BuildContext context) {
-    final List<String> images = widget.selectedRecipe.imagesUrl;
+    final images = widget.recipe.images;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -145,14 +147,14 @@ class _AppBarBodyState extends State<_AppBarBody> {
           titlePadding: EdgeInsets.lerp(
             EdgeInsets.only(
               left: 60,
-              bottom: needsSecondLine(widget.selectedRecipe.title) ? 8 : 15,
+              bottom: needsSecondLine(widget.recipe.title) ? 8 : 15,
               right: 16,
             ), // colapsado
             const EdgeInsets.only(left: 16, bottom: 32, right: 16), // expandido
             t,
           ),
           title: Text(
-            widget.selectedRecipe.title,
+            widget.recipe.title,
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -165,11 +167,10 @@ class _AppBarBodyState extends State<_AppBarBody> {
               SizedBox.expand(
                 child: CarouselSlider.builder(
                   itemCount: images.length,
-                  itemBuilder: (context, index, realIndex) {
-                    final imageUrl = images[index];
+                  itemBuilder: (context, index, _) {
                     return SizedBox.expand(
                       child: MyImageWidget(
-                        image: MyImageModel(url: imageUrl),
+                        image: images[index], // 🔥 local o network
                         fit: BoxFit.cover,
                       ),
                     );
@@ -287,22 +288,33 @@ class _IngredientList extends StatelessWidget {
           String boldText = '';
           String regularText = '';
 
+          //ingredient.measure.id null es vacío/incontable
+          //ingredient.measure.id 11 es unidad
+
           boldText += '\u2022 ';
-          if (ingredient.ammount != null && ingredient.ammount != 0) {
-            boldText += formatDouble(ingredient.ammount ?? 0);
+          if (ingredient.amount != null && ingredient.amount != 0) {
+            boldText += formatDouble(ingredient.amount ?? 0);
           }
 
-          if (ingredient.measure != null) {
-            boldText += ' ${ingredient.measure!}';
+          if (ingredient.measure != null &&
+              ingredient.measure?.id != null &&
+              ingredient.measure?.id != 11) {
+            boldText += ' ${ingredient.measure!.unitKey}';
           }
-          if (ingredient.measure != null && ingredient.ammount != 1) {
+          if (ingredient.measure != null &&
+              ingredient.measure?.id != null &&
+              ingredient.measure?.id != 11 &&
+              ingredient.amount != 1) {
             boldText += 's';
           }
 
-          if (ingredient.ammount != null && ingredient.ammount != 0) {
+          if (ingredient.amount != null && ingredient.amount != 0) {
             regularText += ' ';
           }
-          if (ingredient.measure != null && ingredient.measure != '') {
+          if (ingredient.measure != null &&
+              ingredient.measure?.id != null &&
+              ingredient.measure?.id != 11 &&
+              ingredient.measure!.displayName != '') {
             regularText += 'de ';
           }
           final bool noMeasureOrAmmount = (boldText == '\u2022 ');

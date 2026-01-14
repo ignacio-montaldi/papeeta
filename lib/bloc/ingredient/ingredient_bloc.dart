@@ -22,8 +22,8 @@ class IngredientBloc extends Bloc<IngredientEvent, IngredientState> {
     try {
       List<IngredientUnitModel> units = [
         IngredientUnitModel(
-          id: 0,
-          displayName: '(Vacío)',
+          id: null,
+          displayName: '(Vacío)', //Para incontables
           unitKey: '',
           type: 'unidades',
         ),

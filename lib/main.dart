@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:papeeta/repositories/repositories.dart';
 
 import 'package:provider/provider.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,7 +16,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => AuthService())],
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthService()),
+        RepositoryProvider<RecipesRepository>(
+          create: (_) => RecipesRepositoryImpl(RecipesService()),
+        ),
+      ],
       child: MultiBlocProvider(
         providers: [
           BlocProvider(

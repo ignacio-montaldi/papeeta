@@ -39,7 +39,11 @@ class RecipeList extends StatelessWidget {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(15),
                         child: MyImageWidget(
-                          image: MyImageModel(url: recipe.imagesUrl.first),
+                          image: MyImageModel(
+                            url: recipe.images.isNotEmpty
+                                ? recipe.images.map((image) => image.url).first
+                                : '',
+                          ),
                           width: double.infinity,
                           height: double.infinity,
                           fit: BoxFit.cover, // para que llene sin deformarse

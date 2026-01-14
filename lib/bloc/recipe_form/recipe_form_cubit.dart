@@ -2,12 +2,16 @@ import 'dart:io';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:papeeta/helpers/helpers.dart';
 import 'package:papeeta/models/models.dart';
+import 'package:papeeta/repositories/repositories.dart';
 
 part 'recipe_form_state.dart';
 
 class RecipeFormCubit extends Cubit<RecipeFormState> {
-  RecipeFormCubit() : super(const RecipeFormState());
+  final RecipesRepository recipesRepository;
+
+  RecipeFormCubit(this.recipesRepository) : super(const RecipeFormState());
 
   int _tempIngredientId = -1;
   int _tempStepId = -1;
@@ -25,7 +29,7 @@ class RecipeFormCubit extends Cubit<RecipeFormState> {
       ..add(
         IngredientModel(
           tempId: _tempIngredientId--,
-          ammount: null,
+          amount: null,
           measure: null,
           name: '',
         ),
@@ -41,14 +45,14 @@ class RecipeFormCubit extends Cubit<RecipeFormState> {
   }
 
   void updateIngredient(
-    int index, {
-    double? ammount,
-    String? measure,
+    int ingredientIndex, {
+    double? amount,
+    IngredientUnitModel? measure,
     String? name,
   }) {
-    final ingredient = state.ingredients[index];
+    final ingredient = state.ingredients[ingredientIndex];
     ingredient
-      ..ammount = ammount ?? ingredient.ammount
+      ..amount = amount ?? ingredient.amount
       ..measure = measure ?? ingredient.measure
       ..name = name ?? ingredient.name;
 
@@ -98,6 +102,13 @@ class RecipeFormCubit extends Cubit<RecipeFormState> {
       errors['title'] = 'El nombre es obligatorio';
     }
 
+    // ⛓️‍💥 Link
+    if (state.sourceLink != null &&
+        state.sourceLink!.isNotEmpty &&
+        !isValidUrl(state.sourceLink!.trim())) {
+      errors['link'] = 'Ingrese una URL válida';
+    }
+
     // 🥕 Ingredientes
     if (state.ingredients.isEmpty) {
       errors['ingredients'] = 'Debe agregar al menos un ingrediente';
@@ -106,17 +117,15 @@ class RecipeFormCubit extends Cubit<RecipeFormState> {
         final ing = state.ingredients[i];
 
         if (ing.name.trim().isEmpty) {
-          errors['ingredient_$i'] = 'El ingrediente ${i + 1} no tiene nombre';
+          errors['ingredient_$i'] = 'El ingrediente no tiene nombre';
         }
 
-        if (ing.ammount == null || ing.ammount! <= 0) {
-          errors['ingredient_amount_$i'] =
-              'Cantidad inválida en ingrediente ${i + 1}';
+        if (ing.amount == null || ing.amount! <= 0) {
+          errors['ingredient_amount_$i'] = 'Cantidad inválida';
         }
 
-        if (ing.measure == null || ing.measure!.isEmpty) {
-          errors['ingredient_unit_$i'] =
-              'Unidad no seleccionada en ingrediente ${i + 1}';
+        if (ing.measure == null || ing.measure!.displayName.isEmpty) {
+          errors['ingredient_unit_$i'] = 'Unidad no seleccionada';
         }
       }
     }
@@ -127,7 +136,7 @@ class RecipeFormCubit extends Cubit<RecipeFormState> {
     } else {
       for (int i = 0; i < state.steps.length; i++) {
         if (state.steps[i].description.trim().isEmpty) {
-          errors['step_$i'] = 'El paso ${i + 1} no puede estar vacío';
+          errors['step_$i'] = 'El paso no puede estar vacío';
         }
       }
     }
@@ -183,13 +192,103 @@ class RecipeFormCubit extends Cubit<RecipeFormState> {
 
     if (pickedFile == null) return;
 
-    final updated = List<File>.from(state.images)..add(File(pickedFile.path));
+    final updated = List<MyImageModel>.from(state.images)
+      ..add(MyImageModel(file: File(pickedFile.path)));
 
     emit(state.copyWith(images: updated));
   }
 
   void removeImage(int index) {
-    final updated = List<File>.from(state.images)..removeAt(index);
+    final updated = List<MyImageModel>.from(state.images)..removeAt(index);
     emit(state.copyWith(images: updated));
+  }
+
+  void toggleCategory(CategoryModel category) {
+    final updated = List<CategoryModel>.from(state.categories);
+
+    if (updated.any((c) => c.id == category.id)) {
+      updated.removeWhere((c) => c.id == category.id);
+    } else {
+      updated.add(category);
+    }
+
+    emit(state.copyWith(categories: updated));
+  }
+
+  bool isCategorySelected(CategoryModel category) {
+    return state.categories.any((c) => c.id == category.id);
+  }
+
+  RecipeModel buildPreviewRecipe() {
+    return RecipeModel(
+      id: -1, // dummy
+      title: state.title,
+      subtitle: state.description,
+      images: state.images,
+      ingredients: state.ingredients,
+      categories: state.categories,
+      preparationSteps: state.steps,
+      link: state.sourceLink,
+      author: state.author,
+    );
+  }
+
+  void setAuthor(UsuarioModel user) {
+    emit(state.copyWith(author: user));
+  }
+
+  Future<void> submit() async {
+    validateForm();
+
+    if (!state.isValid) return;
+
+    emit(state.copyWith(isSubmitting: true, submitError: null));
+
+    try {
+      final payload = _buildRequest();
+
+      await recipesRepository.createRecipe(
+        payload: payload,
+        images: state.images,
+      );
+
+      emit(state.copyWith(isSubmitting: false, submitSuccess: true));
+    } catch (e) {
+      emit(
+        state.copyWith(
+          isSubmitting: false,
+          submitError: 'Error al guardar la receta',
+        ),
+      );
+    }
+  }
+
+  Map<String, dynamic> _buildRequest() {
+    return {
+      "title": state.title,
+      "subtitle": state.description,
+      "link": state.sourceLink,
+      "categories": state.categories.map((c) => c.id).toList(),
+      "ingredients": state.ingredients
+          .map(
+            (i) => {
+              "amount": i.amount,
+              "measure_unit_id": i.measure?.id,
+              "name": i.name,
+            },
+          )
+          .toList(),
+
+      "preparationSteps": state.steps
+          .asMap()
+          .entries
+          .map(
+            (entry) => {
+              "step_number": entry.key + 1,
+              "description": entry.value.description,
+            },
+          )
+          .toList(),
+    };
   }
 }

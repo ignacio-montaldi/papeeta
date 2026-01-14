@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:papeeta/models/response/category_group_response_model.dart';
+
 class CategoriesListResponse {
   final bool ok;
   final List<Category> categories;
@@ -30,12 +32,14 @@ class Category {
   final String name;
   final String? imageUrl;
   final int groupId;
+  final Group group;
 
   Category({
     required this.id,
     required this.name,
     required this.imageUrl,
     required this.groupId,
+    required this.group,
   });
 
   factory Category.fromRawJson(String str) =>
@@ -48,6 +52,7 @@ class Category {
     name: json["name"],
     imageUrl: json["image_url"],
     groupId: json["group_id"],
+    group: Group.fromJson(json["group"]),
   );
 
   Map<String, dynamic> toJson() => {
@@ -55,5 +60,6 @@ class Category {
     "name": name,
     "image_url": imageUrl,
     "group_id": groupId,
+    "group": group.toJson(),
   };
 }

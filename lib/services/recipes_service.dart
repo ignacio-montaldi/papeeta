@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import 'package:papeeta/global/enviroment.dart';
+import 'package:papeeta/models/models.dart';
 import 'package:papeeta/models/response/response_models.dart';
 import 'package:papeeta/services/services.dart';
 
@@ -39,5 +40,37 @@ class RecipesService {
     final data = RecipeListResponse.fromJson(resp.data);
 
     return data;
+  }
+
+  Future<int> createRecipe(Map<String, dynamic> body) async {
+    final url = _baseRecipesUrl;
+    final response = await _dio.post(url, data: body);
+
+    return response.data['recipeId'] as int;
+  }
+
+  Future<void> uploadRecipeImages({
+    required int recipeId,
+    required List<MyImageModel> images,
+  }) async {
+    final url = "$_baseRecipesUrl/$recipeId/images";
+
+    final formData = FormData();
+
+    for (int i = 0; i < images.length; i++) {
+      final image = images[i];
+
+      formData.files.add(
+        MapEntry(
+          'images',
+          await MultipartFile.fromFile(
+            image.file!.path,
+            filename: (i + 1).toString(), //image.file!.path.split('/').last,
+          ),
+        ),
+      );
+    }
+
+    await _dio.post(url, data: formData);
   }
 }
