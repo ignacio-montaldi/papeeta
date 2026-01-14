@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:papeeta/core/di/injection.dart';
 import 'package:papeeta/repositories/repositories.dart';
 
 import 'package:provider/provider.dart';
@@ -8,7 +9,10 @@ import 'package:papeeta/bloc/blocs.dart';
 import 'package:papeeta/routes/routes.dart';
 import 'package:papeeta/services/services.dart';
 
-void main() => runApp(const MyApp());
+void main() {
+  setupDependencies();
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

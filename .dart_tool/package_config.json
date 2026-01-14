@@ -260,6 +260,12 @@
       "languageVersion": "3.7"
     },
     {
+      "name": "get_it",
+      "rootUri": "file:///C:/Users/javie/AppData/Local/Pub/Cache/hosted/pub.dev/get_it-9.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
       "name": "http",
       "rootUri": "file:///C:/Users/javie/AppData/Local/Pub/Cache/hosted/pub.dev/http-1.5.0",
       "packageUri": "lib/",
