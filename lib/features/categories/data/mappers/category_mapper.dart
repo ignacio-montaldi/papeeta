@@ -10,8 +10,8 @@ class CategoryMapper {
       name: dto.name,
       imageUrl: (dto.imageUrl != null && dto.imageUrl!.isNotEmpty)
           ? (dto.imageUrl!.startsWith('http')
-              ? dto.imageUrl
-              : '${Enviroment.baseUrl}${dto.imageUrl}')
+                ? dto.imageUrl
+                : '${Enviroment.baseUrl}${dto.imageUrl}')
           : dto.imageUrl,
       groupId: dto.groupId,
       group: dto.group != null

@@ -11,8 +11,8 @@ class RecipeImageMapper {
       id: dto.id,
       url: (dto.url.isNotEmpty)
           ? (dto.url.startsWith('http')
-              ? dto.url
-              : '${Enviroment.baseUrl}${dto.url}')
+                ? dto.url
+                : '${Enviroment.baseUrl}${dto.url}')
           : dto.url,
     );
   }

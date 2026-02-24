@@ -43,14 +43,14 @@ class RecipesRemoteDataSourceImpl implements RecipesRemoteDataSource {
   Future<RecipeResponseDto> getRecipeById(int id) async {
     final res = await dio.get('/recipes/$id');
 
-    return RecipeResponseDto.fromJson(res.data);
+    return RecipeResponseDto.fromJson(res.data['recipe']);
   }
 
   @override
   Future<List<RecipeResponseDto>> getRecipesByCategory(int categoryId) async {
     final res = await dio.get('/recipes/category/$categoryId');
 
-    return (res.data as List)
+    return (res.data['recipes'] as List)
         .map((e) => RecipeResponseDto.fromJson(e))
         .toList();
   }

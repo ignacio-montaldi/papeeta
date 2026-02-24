@@ -9,7 +9,10 @@ final Map<String, Widget Function(BuildContext)> appRoutes = {
   'login': (_) => const LoginPage(),
   'register': (_) => const RegisterPage(),
   'loading': (_) => const LoadingPage(),
-  'recipe': (_) => const RecipePage(),
+  'recipe': (context) {
+    final recipeId = ModalRoute.of(context)!.settings.arguments as int;
+    return RecipePage(recipeId: recipeId);
+  },
   'categories': (_) => CategoriesPage(),
   'recipeList': (_) => const RecipeListPage(),
   'addRecipe': (_) => BlocProvider(

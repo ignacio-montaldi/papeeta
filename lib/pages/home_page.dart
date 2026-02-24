@@ -75,10 +75,16 @@ class _HomePageState extends State<HomePage> {
           builder: (context, categoryState) {
             return BlocBuilder<RecipeBloc, RecipeState>(
               builder: (context, recipeState) {
+                // Lógica principal
+                final hasRecipes = recipeState.currentRecipes != null;
+                final isSilentLoading =
+                    recipeState is RecipeLoading && hasRecipes;
+                final isSilentError = recipeState is RecipeError && hasRecipes;
+
                 if (categoryState is CategoryLoading ||
-                    recipeState is RecipeLoading ||
                     categoryState is CategoryInitial ||
-                    recipeState is RecipeInitial) {
+                    (recipeState is RecipeInitial) ||
+                    (recipeState is RecipeLoading && !hasRecipes)) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
@@ -86,13 +92,13 @@ class _HomePageState extends State<HomePage> {
                   return Center(child: Text(categoryState.message));
                 }
 
-                if (recipeState is RecipeError) {
+                if (recipeState is RecipeError && !hasRecipes) {
                   return Center(child: Text(recipeState.message));
                 }
 
-                if (categoryState is CategoryLoaded && recipeState is RecipeListLoaded) {
+                if (categoryState is CategoryLoaded && hasRecipes) {
                   final categories = categoryState.categories;
-                  final recipes = recipeState.recipes;
+                  final recipes = recipeState.currentRecipes!;
 
                   if (categories.isEmpty && recipes.isEmpty) {
                     return const Center(
@@ -100,23 +106,36 @@ class _HomePageState extends State<HomePage> {
                     );
                   }
 
-                  return SmartRefresher(
-                    controller: _refreshController,
-                    enablePullDown: true,
-                    onRefresh: _onRefresh,
-                    physics: const BouncingScrollPhysics(),
-                    child: ListView(
-                      padding: const EdgeInsets.only(top: 20),
-                      children: [
-                        if (categories.isNotEmpty)
-                          _CategoriesList(categories: categories),
-                        const SizedBox(height: 20),
-                        if (recipes.isNotEmpty)
-                          RecipeList(recipes: recipes)
-                        else
-                          const Center(child: Text('No se encontraron recetas.')),
-                      ],
-                    ),
+                  return Stack(
+                    children: [
+                      SmartRefresher(
+                        controller: _refreshController,
+                        enablePullDown: true,
+                        onRefresh: _onRefresh,
+                        physics: const BouncingScrollPhysics(),
+                        child: ListView(
+                          padding: const EdgeInsets.only(top: 20),
+                          children: [
+                            if (categories.isNotEmpty)
+                              _CategoriesList(categories: categories),
+                            const SizedBox(height: 20),
+                            if (recipes.isNotEmpty)
+                              RecipeList(recipes: recipes)
+                            else
+                              const Center(
+                                child: Text('No se encontraron recetas.'),
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (isSilentLoading)
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: const LinearProgressIndicator(),
+                        ),
+                    ],
                   );
                 }
 

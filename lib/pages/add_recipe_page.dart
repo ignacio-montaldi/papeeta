@@ -257,12 +257,12 @@ class _AddRecipePageState extends State<AddRecipePage> {
                               .read<RecipeFormCubit>()
                               .buildPreviewRecipe();
 
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => RecipePage(previewRecipe: recipe),
-                            ),
-                          );
+                          // Navigator.push(
+                          //   context,
+                          //   MaterialPageRoute(
+                          //     builder: (_) => RecipePage(previewRecipe: recipe),
+                          //   ),
+                          // );
                         },
                       ),
                     ],
