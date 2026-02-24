@@ -11,15 +11,15 @@ class RecipesRemoteDataSourceImpl implements RecipesRemoteDataSource {
 
   @override
   Future<List<RecipeResponseDto>> getRecipes() async {
-    final res = await dio.get('/api/recipes');
-    return (res.data as List)
+    final res = await dio.get('/recipes');
+    return (res.data['recipes'] as List)
         .map((e) => RecipeResponseDto.fromJson(e))
         .toList();
   }
 
   @override
   Future<int> createRecipe(RecipeCreateDto dto) async {
-    final res = await dio.post('/api/recipes', data: dto.toJson());
+    final res = await dio.post('/recipes', data: dto.toJson());
     return res.data['id'];
   }
 
@@ -36,13 +36,22 @@ class RecipesRemoteDataSourceImpl implements RecipesRemoteDataSource {
       );
     }
 
-    await dio.post('/api/recipes/$recipeId/images', data: formData);
+    await dio.post('/recipes/$recipeId/images', data: formData);
   }
 
   @override
   Future<RecipeResponseDto> getRecipeById(int id) async {
-    final res = await dio.get('/api/recipes/$id');
+    final res = await dio.get('/recipes/$id');
 
     return RecipeResponseDto.fromJson(res.data);
+  }
+
+  @override
+  Future<List<RecipeResponseDto>> getRecipesByCategory(int categoryId) async {
+    final res = await dio.get('/recipes/category/$categoryId');
+
+    return (res.data as List)
+        .map((e) => RecipeResponseDto.fromJson(e))
+        .toList();
   }
 }

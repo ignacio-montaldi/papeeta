@@ -36,12 +36,18 @@ class RecipeResponseDto {
       title: json['title'],
       subtitle: json['subtitle'],
       link: json['link'],
-      ingredients: (json['ingredients'] as List<dynamic>)
-          .map((e) => IngredientResponseDto.fromJson(e))
-          .toList(),
-      preparationSteps: (json['preparationSteps'] as List<dynamic>)
-          .map((e) => PreparationStepDto.fromJson(e))
-          .toList(),
+      ingredients:
+          (json["ingredients"] != null
+                  ? json['ingredients'] as List<dynamic>
+                  : [])
+              .map((e) => IngredientResponseDto.fromJson(e))
+              .toList(),
+      preparationSteps:
+          (json["preparationSteps"] != null
+                  ? json['preparationSteps'] as List<dynamic>
+                  : [])
+              .map((e) => PreparationStepDto.fromJson(e))
+              .toList(),
       categories: (json['categories'] as List<dynamic>)
           .map((e) => CategoryDto.fromJson(e))
           .toList(),

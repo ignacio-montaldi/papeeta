@@ -10,4 +10,6 @@ abstract class RecipesRemoteDataSource {
   Future<int> createRecipe(RecipeCreateDto dto);
 
   Future<void> uploadImages(int recipeId, List<RecipeImageUploadDto> images);
+
+  Future<List<RecipeResponseDto>> getRecipesByCategory(int categoryId);
 }

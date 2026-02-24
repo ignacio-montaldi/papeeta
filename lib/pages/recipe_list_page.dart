@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:papeeta/bloc/category/category_bloc.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 
-import 'package:papeeta/bloc/blocs.dart';
-import 'package:papeeta/models/models.dart';
 import 'package:papeeta/widgets/widgets.dart';
+
+import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
+import 'package:papeeta/features/recipes/domain/entities/recipe.dart';
 
 class RecipeListPage extends StatefulWidget {
   const RecipeListPage({super.key});
@@ -24,18 +26,13 @@ class _RecipeListPageState extends State<RecipeListPage> {
 
     // Esperamos a que el widget se monte completamente antes de acceder al context
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final categoryBloc = BlocProvider.of<CategoryBloc>(
-        context,
-        listen: false,
-      );
-      final recipeBloc = BlocProvider.of<RecipeBloc>(context, listen: false);
-
+      final categoryBloc = context.read<CategoryBloc>();
       final selectedCategory = categoryBloc.state.selectedCategory;
 
       if (selectedCategory != null) {
-        recipeBloc.getRecipesByCategory(selectedCategory.id!);
-      } else {
-        debugPrint("⚠️ No hay categoría seleccionada en el CategoryBloc");
+        context.read<RecipeBloc>().add(
+          LoadRecipesByCategory(selectedCategory.id!),
+        );
       }
     });
   }
@@ -62,24 +59,33 @@ class _RecipeListPageState extends State<RecipeListPage> {
             automaticallyImplyLeading: false,
           ),
           body: BlocBuilder<RecipeBloc, RecipeState>(
-            builder: (context, recipeState) {
-              final recipes = recipeState.recipesByCategory;
-
-              if (recipes == null) {
+            builder: (context, state) {
+              if (state is RecipeLoading) {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              if (recipes.isEmpty) {
-                return const Center(
-                  child: Text('No se encontraron recetas para esta categoría.'),
+              if (state is RecipeListLoaded) {
+                if (state.recipes.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'No se encontraron recetas para esta categoría.',
+                    ),
+                  );
+                }
+
+                return SmartRefresher(
+                  controller: _refreshController,
+                  enablePullDown: true,
+                  onRefresh: _recargar,
+                  child: _mainView(state.recipes),
                 );
               }
-              return SmartRefresher(
-                controller: _refreshController,
-                enablePullDown: true,
-                onRefresh: _recargar,
-                child: _mainView(recipes),
-              );
+
+              if (state is RecipeError) {
+                return Center(child: Text(state.message));
+              }
+
+              return const SizedBox();
             },
           ),
         );
@@ -87,16 +93,19 @@ class _RecipeListPageState extends State<RecipeListPage> {
     );
   }
 
-  Widget _mainView(List<RecipeModel> recipes) {
+  Widget _mainView(List<Recipe> recipes) {
     return ListView(
       padding: const EdgeInsets.only(top: 20),
-      physics: BouncingScrollPhysics(),
+      physics: const BouncingScrollPhysics(),
       children: [RecipeList(recipes: recipes)],
     );
   }
 
   _recargar() async {
-    await Future.delayed(Duration(seconds: 1));
+    final category = context.read<CategoryBloc>().state.selectedCategory;
+    if (category != null) {
+      context.read<RecipeBloc>().add(LoadRecipesByCategory(category.id!));
+    }
     _refreshController.refreshCompleted();
   }
 }

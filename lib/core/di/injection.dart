@@ -1,9 +1,15 @@
 import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
+import 'package:papeeta/features/categories/data/datasources/categories_remote_datasource.dart';
+import 'package:papeeta/features/categories/data/datasources/categories_remote_datasource_impl.dart';
+import 'package:papeeta/features/categories/domain/repositories/category_repository.dart';
+import 'package:papeeta/features/categories/domain/repositories/category_repository_impl.dart';
+import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
 import 'package:papeeta/features/recipes/data/datasources/recipes_remote_datasource.dart';
 import 'package:papeeta/features/recipes/data/datasources/recipes_remote_datasource_impl.dart';
 import 'package:papeeta/features/recipes/domain/repositories/recipes_repository.dart';
 import 'package:papeeta/features/recipes/domain/repositories/recipes_repository_impl.dart';
+import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
 import 'package:papeeta/global/enviroment.dart';
 import 'package:papeeta/services/papeeta_interceptor.dart';
 
@@ -12,6 +18,7 @@ final getIt = GetIt.instance;
 void setupDependencies() {
   _registerDio();
   _registerRecipes();
+  _registerCategories();
 }
 
 void _registerDio() {
@@ -40,5 +47,21 @@ void _registerRecipes() {
 
   getIt.registerLazySingleton<RecipesRepository>(
     () => RecipesRepositoryImpl(getIt<RecipesRemoteDataSource>()),
+  );
+
+  getIt.registerFactory(() => RecipeBloc(getIt<RecipesRepository>()));
+}
+
+void _registerCategories() {
+  getIt.registerLazySingleton<CategoriesRemoteDataSource>(
+    () => CategoriesRemoteDataSourceImpl(getIt<Dio>()),
+  );
+
+  getIt.registerLazySingleton<CategoryRepository>(
+    () => CategoryRepositoryImpl(getIt<CategoriesRemoteDataSource>()),
+  );
+
+  getIt.registerFactory<CategoryBloc>(
+    () => CategoryBloc(getIt<CategoryRepository>()),
   );
 }

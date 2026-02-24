@@ -1,8 +1,8 @@
-import 'package:papeeta/features/recipes/domain/entities/category.dart';
+import 'package:papeeta/core/domain/entities/category.dart';
 import 'package:papeeta/features/recipes/domain/entities/ingredient.dart';
 import 'package:papeeta/features/recipes/domain/entities/preparation_step.dart';
 import 'package:papeeta/features/recipes/domain/entities/recipe_image.dart';
-import 'package:papeeta/features/recipes/domain/entities/user.dart';
+import 'package:papeeta/core/domain/entities/user.dart';
 
 class Recipe {
   final int id;

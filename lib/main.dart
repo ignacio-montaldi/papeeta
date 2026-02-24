@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:papeeta/core/di/injection.dart';
+import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
+import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
 import 'package:papeeta/repositories/repositories.dart';
 
 import 'package:provider/provider.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import 'package:papeeta/bloc/blocs.dart';
+import 'package:papeeta/bloc/blocs.dart' as old_blocs;
 import 'package:papeeta/routes/routes.dart';
 import 'package:papeeta/services/services.dart';
 
@@ -29,16 +31,22 @@ class MyApp extends StatelessWidget {
       child: MultiBlocProvider(
         providers: [
           BlocProvider(
-            create: (context) => RecipeBloc(recipesService: RecipesService()),
+            create: (context) =>
+                old_blocs.RecipeBloc(recipesService: RecipesService()),
           ),
           BlocProvider(
             create: (context) =>
-                CategoryBloc(categoriesService: CategoriesService()),
+                old_blocs.CategoryBloc(categoriesService: CategoriesService()),
           ),
           BlocProvider(
-            create: (context) =>
-                IngredientBloc(ingredientService: IngredientService()),
+            create: (context) => old_blocs.IngredientBloc(
+              ingredientService: IngredientService(),
+            ),
           ),
+
+          //Nuevos
+          BlocProvider<RecipeBloc>(create: (_) => getIt<RecipeBloc>()),
+          BlocProvider<CategoryBloc>(create: (_) => getIt<CategoryBloc>()),
         ],
         child: MaterialApp(
           debugShowCheckedModeBanner: false,

@@ -12,4 +12,6 @@ abstract class RecipesRepository {
     required int recipeId,
     required List<RecipeImageUpload> images,
   });
+
+  Future<List<Recipe>> getRecipesByCategory(int categoryId);
 }

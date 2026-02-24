@@ -1,4 +1,4 @@
-import '../../domain/entities/category_group.dart';
+import '../../../../core/domain/entities/category_group.dart';
 import '../models/category_group_dto.dart';
 
 class CategoryGroupMapper {

@@ -36,4 +36,10 @@ class RecipesRepositoryImpl implements RecipesRepository {
     final dtos = images.map(RecipeImageMapper.toUploadDto).toList();
     await remote.uploadImages(recipeId, dtos);
   }
+
+  @override
+  Future<List<Recipe>> getRecipesByCategory(int categoryId) async {
+    final dtos = await remote.getRecipesByCategory(categoryId);
+    return dtos.map(RecipeMapper.toEntity).toList();
+  }
 }
