@@ -8,7 +8,7 @@ import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart
 import 'package:papeeta/features/recipes/data/datasources/recipes_remote_datasource.dart';
 import 'package:papeeta/features/recipes/data/datasources/recipes_remote_datasource_impl.dart';
 import 'package:papeeta/features/recipes/domain/repositories/recipes_repository.dart';
-import 'package:papeeta/features/recipes/domain/repositories/recipes_repository_impl.dart';
+import 'package:papeeta/features/recipes/data/repositories/recipes_repository_impl.dart';
 import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
 import 'package:papeeta/global/enviroment.dart';
 import 'package:papeeta/services/papeeta_interceptor.dart';

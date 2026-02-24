@@ -1,3 +1,4 @@
+import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:papeeta/core/domain/entities/category.dart';
@@ -9,7 +10,7 @@ part 'category_state.dart';
 class CategoryBloc extends Bloc<CategoryEvent, CategoryState> {
   final CategoryRepository repository;
 
-  CategoryBloc(this.repository) : super(CategoryInitial()) {
+  CategoryBloc(this.repository) : super(const CategoryInitial()) {
     on<LoadCategories>(_onLoadCategories);
   }
 
@@ -17,7 +18,7 @@ class CategoryBloc extends Bloc<CategoryEvent, CategoryState> {
     LoadCategories event,
     Emitter<CategoryState> emit,
   ) async {
-    emit(CategoryLoading());
+    emit(const CategoryLoading());
 
     try {
       final result = await repository.getCategories();
@@ -27,7 +28,7 @@ class CategoryBloc extends Bloc<CategoryEvent, CategoryState> {
       debugPrint('❌ Error loading recipes by category: $e');
       debugPrint('$st');
 
-      emit(CategoryError('Error al cargar categorías'));
+      emit(const CategoryError('Error al cargar categorías'));
     }
   }
 }

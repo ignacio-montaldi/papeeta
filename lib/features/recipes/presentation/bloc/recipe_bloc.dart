@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:papeeta/features/recipes/domain/entities/recipe.dart';
 import 'package:papeeta/features/recipes/domain/repositories/recipes_repository.dart';
@@ -9,22 +9,23 @@ part 'recipe_state.dart';
 class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
   final RecipesRepository repository;
 
-  RecipeBloc(this.repository) : super(RecipeInitial()) {
+  RecipeBloc(this.repository) : super(const RecipeInitial()) {
     on<LoadRecipes>(_onLoadRecipes);
     on<LoadRecipeDetail>(_onLoadRecipeDetail);
     on<LoadRecipesByCategory>(_onLoadByCategory);
+    on<SelectRecipe>(_onSelectRecipe);
   }
 
   Future<void> _onLoadRecipes(
     LoadRecipes event,
     Emitter<RecipeState> emit,
   ) async {
-    emit(RecipeLoading());
+    emit(const RecipeLoading());
     try {
       final recipes = await repository.getRecipes();
       emit(RecipeListLoaded(recipes));
     } catch (e) {
-      emit(RecipeError('Error al cargar recetas'));
+      emit(const RecipeError('Error al cargar recetas'));
     }
   }
 
@@ -32,12 +33,12 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
     LoadRecipeDetail event,
     Emitter<RecipeState> emit,
   ) async {
-    emit(RecipeLoading());
+    emit(const RecipeLoading());
     try {
       final recipe = await repository.getRecipeById(event.id);
       emit(RecipeDetailLoaded(recipe));
     } catch (e) {
-      emit(RecipeError('Error al cargar la receta'));
+      emit(const RecipeError('Error al cargar la receta'));
     }
   }
 
@@ -45,18 +46,19 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
     LoadRecipesByCategory event,
     Emitter<RecipeState> emit,
   ) async {
-    emit(RecipeLoading());
-
+    emit(const RecipeLoading());
     try {
-      // Ideal: método dedicado en repo
       final recipes = await repository.getRecipesByCategory(event.categoryId);
-
       emit(RecipeListLoaded(recipes));
-    } catch (e, st) {
-      debugPrint('❌ Error loading recipes by category: $e');
-      debugPrint('$st');
-
-      emit(RecipeError('Error al cargar recetas por categoría'));
+    } catch (e) {
+      emit(const RecipeError('Error al cargar recetas por categoría'));
     }
+  }
+
+  void _onSelectRecipe(
+    SelectRecipe event,
+    Emitter<RecipeState> emit,
+  ) {
+    emit(RecipeDetailLoaded(event.recipe));
   }
 }

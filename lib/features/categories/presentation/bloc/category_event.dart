@@ -1,7 +1,12 @@
 part of 'category_bloc.dart';
 
-abstract class CategoryEvent {}
+sealed class CategoryEvent extends Equatable {
+  const CategoryEvent();
 
-class LoadCategories extends CategoryEvent {
-  LoadCategories();
+  @override
+  List<Object?> get props => [];
+}
+
+final class LoadCategories extends CategoryEvent {
+  const LoadCategories();
 }

@@ -1,15 +1,36 @@
 part of 'recipe_bloc.dart';
 
-abstract class RecipeEvent {}
+sealed class RecipeEvent extends Equatable {
+  const RecipeEvent();
 
-class LoadRecipes extends RecipeEvent {}
-
-class LoadRecipeDetail extends RecipeEvent {
-  final int id;
-  LoadRecipeDetail(this.id);
+  @override
+  List<Object?> get props => [];
 }
 
-class LoadRecipesByCategory extends RecipeEvent {
+final class LoadRecipes extends RecipeEvent {
+  const LoadRecipes();
+}
+
+final class LoadRecipeDetail extends RecipeEvent {
+  final int id;
+  const LoadRecipeDetail(this.id);
+
+  @override
+  List<Object?> get props => [id];
+}
+
+final class LoadRecipesByCategory extends RecipeEvent {
   final int categoryId;
-  LoadRecipesByCategory(this.categoryId);
+  const LoadRecipesByCategory(this.categoryId);
+
+  @override
+  List<Object?> get props => [categoryId];
+}
+
+final class SelectRecipe extends RecipeEvent {
+  final Recipe recipe;
+  const SelectRecipe(this.recipe);
+
+  @override
+  List<Object?> get props => [recipe.id];
 }

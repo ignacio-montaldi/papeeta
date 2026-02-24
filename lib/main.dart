@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:papeeta/core/di/injection.dart';
 import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
 import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
-import 'package:papeeta/repositories/repositories.dart';
 
 import 'package:provider/provider.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -24,16 +23,9 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthService()),
-        RepositoryProvider<RecipesRepository>(
-          create: (_) => RecipesRepositoryImpl(RecipesService()),
-        ),
       ],
       child: MultiBlocProvider(
         providers: [
-          BlocProvider(
-            create: (context) =>
-                old_blocs.RecipeBloc(recipesService: RecipesService()),
-          ),
           BlocProvider(
             create: (context) =>
                 old_blocs.CategoryBloc(categoriesService: CategoriesService()),
@@ -44,7 +36,7 @@ class MyApp extends StatelessWidget {
             ),
           ),
 
-          //Nuevos
+          // Clean Architecture
           BlocProvider<RecipeBloc>(create: (_) => getIt<RecipeBloc>()),
           BlocProvider<CategoryBloc>(create: (_) => getIt<CategoryBloc>()),
         ],

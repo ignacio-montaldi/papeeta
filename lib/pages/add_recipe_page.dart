@@ -569,7 +569,7 @@ class _IngredientCard extends StatelessWidget {
 
                 // Unidad (dropdown)
                 DropdownButtonFormField<IngredientUnitModel>(
-                  value: ingredient.measure,
+                  initialValue: ingredient.measure,
                   items: units.map((u) {
                     return DropdownMenuItem(
                       value: u,

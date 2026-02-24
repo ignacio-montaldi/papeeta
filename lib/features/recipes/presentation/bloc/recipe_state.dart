@@ -1,22 +1,41 @@
 part of 'recipe_bloc.dart';
 
-abstract class RecipeState {}
+sealed class RecipeState extends Equatable {
+  const RecipeState();
 
-class RecipeInitial extends RecipeState {}
+  @override
+  List<Object?> get props => [];
+}
 
-class RecipeLoading extends RecipeState {}
+final class RecipeInitial extends RecipeState {
+  const RecipeInitial();
+}
 
-class RecipeListLoaded extends RecipeState {
+final class RecipeLoading extends RecipeState {
+  const RecipeLoading();
+}
+
+final class RecipeListLoaded extends RecipeState {
   final List<Recipe> recipes;
-  RecipeListLoaded(this.recipes);
+  const RecipeListLoaded(this.recipes);
+
+  @override
+  List<Object?> get props => [recipes];
 }
 
-class RecipeDetailLoaded extends RecipeState {
+final class RecipeDetailLoaded extends RecipeState {
   final Recipe recipe;
-  RecipeDetailLoaded(this.recipe);
+
+  const RecipeDetailLoaded(this.recipe);
+
+  @override
+  List<Object?> get props => [recipe];
 }
 
-class RecipeError extends RecipeState {
+final class RecipeError extends RecipeState {
   final String message;
-  RecipeError(this.message);
+  const RecipeError(this.message);
+
+  @override
+  List<Object?> get props => [message];
 }

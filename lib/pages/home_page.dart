@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:papeeta/core/domain/entities/category.dart';
 import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
-import 'package:papeeta/features/recipes/domain/entities/recipe.dart';
 import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
-import 'package:papeeta/models/my_image_model.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 
@@ -24,12 +23,12 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    context.read<RecipeBloc>().add(LoadRecipes());
+    context.read<RecipeBloc>().add(const LoadRecipes());
     context.read<CategoryBloc>().add(LoadCategories());
   }
 
   void _onRefresh() {
-    context.read<RecipeBloc>().add(LoadRecipes());
+    context.read<RecipeBloc>().add(const LoadRecipes());
     context.read<CategoryBloc>().add(LoadCategories());
   }
 
@@ -62,58 +61,70 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: Theme.of(context).colorScheme.onPrimary,
         child: Icon(Icons.post_add, color: Colors.white),
       ),
-      body: BlocBuilder<CategoryBloc, CategoryState>(
-        builder: (context, categoryState) {
-          return BlocBuilder<RecipeBloc, RecipeState>(
-            builder: (context, recipeState) {
-              if (categoryState is CategoryLoading ||
-                  recipeState is RecipeLoading) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              if (categoryState is CategoryError) {
-                return Center(child: Text(categoryState.message));
-              }
-
-              if (recipeState is RecipeError) {
-                return Center(child: Text(recipeState.message));
-              }
-
-              final categories = categoryState is CategoryLoaded
-                  ? categoryState.categories
-                  : <Category>[];
-
-              final recipes = recipeState is RecipeListLoaded
-                  ? recipeState.recipes
-                  : <Recipe>[];
-
-              if (categories.isEmpty && recipes.isEmpty) {
-                return const Center(
-                  child: Text('No se encontraron recetas ni categorías'),
-                );
-              }
-
-              return SmartRefresher(
-                controller: _refreshController,
-                enablePullDown: true,
-                onRefresh: _onRefresh,
-                physics: const BouncingScrollPhysics(),
-                child: ListView(
-                  padding: const EdgeInsets.only(top: 20),
-                  children: [
-                    if (categories.isNotEmpty)
-                      _CategoriesList(categories: categories),
-                    const SizedBox(height: 20),
-                    if (recipes.isNotEmpty)
-                      RecipeList(recipes: recipes)
-                    else
-                      const Center(child: Text('No se encontraron recetas.')),
-                  ],
-                ),
-              );
-            },
-          );
+      body: BlocListener<RecipeBloc, RecipeState>(
+        listener: (context, recipeState) {
+          if (recipeState is RecipeListLoaded || recipeState is RecipeError) {
+            if (recipeState is RecipeError) {
+              _refreshController.refreshFailed();
+            } else {
+              _refreshController.refreshCompleted();
+            }
+          }
         },
+        child: BlocBuilder<CategoryBloc, CategoryState>(
+          builder: (context, categoryState) {
+            return BlocBuilder<RecipeBloc, RecipeState>(
+              builder: (context, recipeState) {
+                if (categoryState is CategoryLoading ||
+                    recipeState is RecipeLoading ||
+                    categoryState is CategoryInitial ||
+                    recipeState is RecipeInitial) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (categoryState is CategoryError) {
+                  return Center(child: Text(categoryState.message));
+                }
+
+                if (recipeState is RecipeError) {
+                  return Center(child: Text(recipeState.message));
+                }
+
+                if (categoryState is CategoryLoaded && recipeState is RecipeListLoaded) {
+                  final categories = categoryState.categories;
+                  final recipes = recipeState.recipes;
+
+                  if (categories.isEmpty && recipes.isEmpty) {
+                    return const Center(
+                      child: Text('No se encontraron recetas ni categorías'),
+                    );
+                  }
+
+                  return SmartRefresher(
+                    controller: _refreshController,
+                    enablePullDown: true,
+                    onRefresh: _onRefresh,
+                    physics: const BouncingScrollPhysics(),
+                    child: ListView(
+                      padding: const EdgeInsets.only(top: 20),
+                      children: [
+                        if (categories.isNotEmpty)
+                          _CategoriesList(categories: categories),
+                        const SizedBox(height: 20),
+                        if (recipes.isNotEmpty)
+                          RecipeList(recipes: recipes)
+                        else
+                          const Center(child: Text('No se encontraron recetas.')),
+                      ],
+                    ),
+                  );
+                }
+
+                return const SizedBox.shrink();
+              },
+            );
+          },
+        ),
       ),
     );
   }
@@ -221,11 +232,20 @@ class _CategoryItem extends StatelessWidget {
             child: CircleAvatar(
               radius: 35,
               backgroundColor: Colors.white,
-              child: imageUrl != null
-                  ? MyImageWidget(
-                      image: MyImageModel(url: imageUrl!),
-                      width: 45,
-                      height: 45,
+              child: imageUrl != null && imageUrl!.isNotEmpty
+                  ? ClipOval(
+                      child: CachedNetworkImage(
+                        imageUrl: imageUrl!,
+                        fit: BoxFit.cover,
+                        width: 45,
+                        height: 45,
+                        placeholder: (context, url) => const Padding(
+                          padding: EdgeInsets.all(12.0),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        errorWidget: (context, url, error) =>
+                            const Icon(Icons.broken_image, color: Colors.grey),
+                      ),
                     )
                   : Icon(icon, color: Colors.black54, size: 30),
             ),
