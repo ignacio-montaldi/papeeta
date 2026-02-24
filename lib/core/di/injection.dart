@@ -3,7 +3,7 @@ import 'package:get_it/get_it.dart';
 import 'package:papeeta/features/categories/data/datasources/categories_remote_datasource.dart';
 import 'package:papeeta/features/categories/data/datasources/categories_remote_datasource_impl.dart';
 import 'package:papeeta/features/categories/domain/repositories/category_repository.dart';
-import 'package:papeeta/features/categories/domain/repositories/category_repository_impl.dart';
+import 'package:papeeta/features/categories/data/repositories/category_repository_impl.dart';
 import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
 import 'package:papeeta/features/recipes/data/datasources/recipes_remote_datasource.dart';
 import 'package:papeeta/features/recipes/data/datasources/recipes_remote_datasource_impl.dart';
