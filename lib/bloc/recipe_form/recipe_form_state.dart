@@ -5,18 +5,16 @@ class RecipeFormState {
   final String description;
   final String? sourceLink;
 
-  final List<IngredientModel> ingredients;
-  final List<PreparationStepModel> steps;
-  final List<CategoryModel> categories;
-  final List<MyImageModel> images;
+  final List<Ingredient> ingredients;
+  final List<PreparationStep> steps;
+  final List<Category> categories;
+  final List<RecipeImageUpload> images;
+  final List<int> ingredientUiKeys;
+  final List<int> stepUiKeys;
 
-  final UsuarioModel? author;
-
-  // validation
   final Map<String, String> errors;
   final bool isValid;
 
-  // submit lifecycle
   final bool isSubmitting;
   final bool submitSuccess;
   final String? submitError;
@@ -29,7 +27,8 @@ class RecipeFormState {
     this.steps = const [],
     this.categories = const [],
     this.images = const [],
-    this.author,
+    this.ingredientUiKeys = const [],
+    this.stepUiKeys = const [],
 
     this.errors = const {},
     this.isValid = false,
@@ -43,11 +42,12 @@ class RecipeFormState {
     String? title,
     String? description,
     String? sourceLink,
-    List<IngredientModel>? ingredients,
-    List<PreparationStepModel>? steps,
-    List<CategoryModel>? categories,
-    List<MyImageModel>? images,
-    UsuarioModel? author,
+    List<Ingredient>? ingredients,
+    List<PreparationStep>? steps,
+    List<Category>? categories,
+    List<RecipeImageUpload>? images,
+    List<int>? ingredientUiKeys,
+    List<int>? stepUiKeys,
 
     Map<String, String>? errors,
     bool? isValid,
@@ -55,6 +55,7 @@ class RecipeFormState {
     bool? isSubmitting,
     bool? submitSuccess,
     String? submitError,
+    bool clearSubmitError = false,
   }) {
     return RecipeFormState(
       title: title ?? this.title,
@@ -64,14 +65,15 @@ class RecipeFormState {
       steps: steps ?? this.steps,
       categories: categories ?? this.categories,
       images: images ?? this.images,
-      author: author ?? this.author,
+      ingredientUiKeys: ingredientUiKeys ?? this.ingredientUiKeys,
+      stepUiKeys: stepUiKeys ?? this.stepUiKeys,
 
       errors: errors ?? this.errors,
       isValid: isValid ?? this.isValid,
 
       isSubmitting: isSubmitting ?? this.isSubmitting,
       submitSuccess: submitSuccess ?? this.submitSuccess,
-      submitError: submitError,
+      submitError: clearSubmitError ? null : (submitError ?? this.submitError),
     );
   }
 }

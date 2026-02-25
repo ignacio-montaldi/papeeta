@@ -79,7 +79,7 @@ class _HomePageState extends State<HomePage> {
                 final hasRecipes = recipeState.currentRecipes != null;
                 final isSilentLoading =
                     recipeState is RecipeLoading && hasRecipes;
-                final isSilentError = recipeState is RecipeError && hasRecipes;
+                // final isSilentError = recipeState is RecipeError && hasRecipes;
 
                 if (categoryState is CategoryLoading ||
                     categoryState is CategoryInitial ||

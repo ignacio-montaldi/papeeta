@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -11,9 +13,19 @@ import 'package:papeeta/core/domain/entities/user.dart';
 import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
 
 class RecipePage extends StatefulWidget {
-  final int recipeId; // Pasamos solo el ID
+  final int? recipeId;
+  final Recipe? previewRecipe;
+  final List<File> previewImages;
 
-  const RecipePage({super.key, required this.recipeId});
+  const RecipePage({
+    super.key,
+    this.recipeId,
+    this.previewRecipe,
+    this.previewImages = const [],
+  }) : assert(
+         (recipeId != null) != (previewRecipe != null),
+         'Debes enviar recipeId o previewRecipe',
+       );
 
   @override
   State<RecipePage> createState() => _RecipePageState();
@@ -23,12 +35,27 @@ class _RecipePageState extends State<RecipePage> {
   @override
   void initState() {
     super.initState();
-    context.read<RecipeBloc>().add(LoadRecipeDetail(widget.recipeId));
+    if (widget.recipeId != null) {
+      context.read<RecipeBloc>().add(LoadRecipeDetail(widget.recipeId!));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final double appBarExpandedHeight = 300;
+
+    if (widget.previewRecipe != null) {
+      return SafeArea(
+        top: false,
+        child: Scaffold(
+          body: _RecipeContent(
+            recipe: widget.previewRecipe!,
+            appBarExpandedHeight: appBarExpandedHeight,
+            previewImages: widget.previewImages,
+          ),
+        ),
+      );
+    }
 
     return SafeArea(
       top: false,
@@ -55,53 +82,9 @@ class _RecipePageState extends State<RecipePage> {
               return const Center(child: Text('Cargando receta...'));
             }
 
-            return CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: <Widget>[
-                SliverAppBar(
-                  stretch: true,
-                  pinned: true,
-                  centerTitle: true,
-                  expandedHeight: appBarExpandedHeight,
-                  backgroundColor: Theme.of(context).colorScheme.onPrimary,
-                  iconTheme: const IconThemeData(color: Colors.white),
-                  flexibleSpace: _AppBarBody(
-                    recipe: recipe,
-                    appBarExpandedHeight: appBarExpandedHeight,
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                    child: ListView(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        _CategoriesList(
-                          categories: recipe.categories
-                              .map((c) => c.name)
-                              .toList(),
-                        ),
-                        const SizedBox(height: 10),
-                        const _SectionTitle(title: 'Ingredientes'),
-                        const SizedBox(height: 5),
-                        _IngredientList(ingredients: recipe.ingredients),
-                        const SizedBox(height: 10),
-                        const _SectionTitle(title: 'Preparación'),
-                        const SizedBox(height: 5),
-                        _PreparationStepsList(preparationSteps: recipe.steps),
-                        const SizedBox(height: 10),
-                        const _SectionTitle(title: 'Fuente'),
-                        const SizedBox(height: 5),
-                        _Link(link: recipe.link),
-                        const SizedBox(height: 10),
-                        if (recipe.author != null)
-                          _AuthorWidget(author: recipe.author!),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+            return _RecipeContent(
+              recipe: recipe,
+              appBarExpandedHeight: appBarExpandedHeight,
             );
           },
         ),
@@ -110,11 +93,78 @@ class _RecipePageState extends State<RecipePage> {
   }
 }
 
+class _RecipeContent extends StatelessWidget {
+  final Recipe recipe;
+  final double appBarExpandedHeight;
+  final List<File> previewImages;
+
+  const _RecipeContent({
+    required this.recipe,
+    required this.appBarExpandedHeight,
+    this.previewImages = const [],
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: <Widget>[
+        SliverAppBar(
+          stretch: true,
+          pinned: true,
+          centerTitle: true,
+          expandedHeight: appBarExpandedHeight,
+          backgroundColor: Theme.of(context).colorScheme.onPrimary,
+          iconTheme: const IconThemeData(color: Colors.white),
+          flexibleSpace: _AppBarBody(
+            recipe: recipe,
+            appBarExpandedHeight: appBarExpandedHeight,
+            previewImages: previewImages,
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: ListView(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                _CategoriesList(
+                  categories: recipe.categories.map((c) => c.name).toList(),
+                ),
+                const SizedBox(height: 10),
+                const _SectionTitle(title: 'Ingredientes'),
+                const SizedBox(height: 5),
+                _IngredientList(ingredients: recipe.ingredients),
+                const SizedBox(height: 10),
+                const _SectionTitle(title: 'Preparación'),
+                const SizedBox(height: 5),
+                _PreparationStepsList(preparationSteps: recipe.steps),
+                const SizedBox(height: 10),
+                const _SectionTitle(title: 'Fuente'),
+                const SizedBox(height: 5),
+                _Link(link: recipe.link),
+                const SizedBox(height: 10),
+                if (recipe.author != null) _AuthorWidget(author: recipe.author!),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _AppBarBody extends StatefulWidget {
   final Recipe recipe;
   final double appBarExpandedHeight;
+  final List<File> previewImages;
 
-  const _AppBarBody({required this.recipe, required this.appBarExpandedHeight});
+  const _AppBarBody({
+    required this.recipe,
+    required this.appBarExpandedHeight,
+    this.previewImages = const [],
+  });
 
   @override
   State<_AppBarBody> createState() => _AppBarBodyState();
@@ -141,6 +191,8 @@ class _AppBarBodyState extends State<_AppBarBody> {
   @override
   Widget build(BuildContext context) {
     final images = widget.recipe.images;
+    final hasPreviewImages = widget.previewImages.isNotEmpty;
+    final imageCount = hasPreviewImages ? widget.previewImages.length : images.length;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -174,29 +226,40 @@ class _AppBarBodyState extends State<_AppBarBody> {
             fit: StackFit.expand,
             children: [
               SizedBox.expand(
-                child: CarouselSlider.builder(
-                  itemCount: images.length,
-                  itemBuilder: (context, index, _) {
-                    return SizedBox.expand(
-                      child: CachedNetworkImage(
-                        imageUrl: images[index].url,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) =>
-                            const Center(child: CircularProgressIndicator()),
-                        errorWidget: (context, url, error) =>
-                            const Icon(Icons.broken_image),
+                child: imageCount == 0
+                    ? Container(color: Theme.of(context).colorScheme.onPrimary)
+                    : CarouselSlider.builder(
+                        itemCount: imageCount,
+                        itemBuilder: (context, index, _) {
+                          if (hasPreviewImages) {
+                            return SizedBox.expand(
+                              child: Image.file(
+                                widget.previewImages[index],
+                                fit: BoxFit.cover,
+                              ),
+                            );
+                          }
+
+                          return SizedBox.expand(
+                            child: CachedNetworkImage(
+                              imageUrl: images[index].url,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) =>
+                                  const Center(child: CircularProgressIndicator()),
+                              errorWidget: (context, url, error) =>
+                                  const Icon(Icons.broken_image),
+                            ),
+                          );
+                        },
+                        options: CarouselOptions(
+                          height: double.infinity,
+                          viewportFraction: 1.0,
+                          scrollPhysics: const BouncingScrollPhysics(),
+                          onPageChanged: (index, reason) {
+                            setState(() => currentIndex = index);
+                          },
+                        ),
                       ),
-                    );
-                  },
-                  options: CarouselOptions(
-                    height: double.infinity,
-                    viewportFraction: 1.0,
-                    scrollPhysics: const BouncingScrollPhysics(),
-                    onPageChanged: (index, reason) {
-                      setState(() => currentIndex = index);
-                    },
-                  ),
-                ),
               ),
               IgnorePointer(
                 child: DecoratedBox(
@@ -218,7 +281,7 @@ class _AppBarBodyState extends State<_AppBarBody> {
                 right: 0,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(images.length, (index) {
+                  children: List.generate(imageCount, (index) {
                     return AnimatedContainer(
                       duration: const Duration(milliseconds: 250),
                       width: currentIndex == index ? 10 : 8,

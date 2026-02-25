@@ -3,8 +3,13 @@ import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:papeeta/helpers/helpers.dart';
-import 'package:papeeta/models/models.dart';
-import 'package:papeeta/repositories/repositories.dart';
+import 'package:papeeta/core/domain/entities/category.dart';
+import 'package:papeeta/features/recipes/domain/entities/ingredient.dart';
+import 'package:papeeta/features/recipes/domain/entities/ingredient_unit.dart';
+import 'package:papeeta/features/recipes/domain/entities/preparation_step.dart';
+import 'package:papeeta/features/recipes/domain/entities/recipe.dart';
+import 'package:papeeta/features/recipes/domain/entities/recipe_image_upload.dart';
+import 'package:papeeta/features/recipes/domain/repositories/recipes_repository.dart';
 
 part 'recipe_form_state.dart';
 
@@ -13,103 +18,94 @@ class RecipeFormCubit extends Cubit<RecipeFormState> {
 
   RecipeFormCubit(this.recipesRepository) : super(const RecipeFormState());
 
-  int _tempIngredientId = -1;
-  int _tempStepId = -1;
+  int _nextIngredientUiKey = 0;
+  int _nextStepUiKey = 0;
 
-  // TEXTOS
   void setTitle(String value) => emit(state.copyWith(title: value));
 
   void setDescription(String value) => emit(state.copyWith(description: value));
 
   void setSourceLink(String? value) => emit(state.copyWith(sourceLink: value));
 
-  // INGREDIENTES
   void addIngredient() {
-    final list = List<IngredientModel>.from(state.ingredients)
-      ..add(
-        IngredientModel(
-          tempId: _tempIngredientId--,
-          amount: null,
-          measure: null,
-          name: '',
-        ),
-      );
+    final list = List<Ingredient>.from(state.ingredients)
+      ..add(const Ingredient(amount: null, unit: null, name: ''));
+    final keys = List<int>.from(state.ingredientUiKeys)
+      ..add(_nextIngredientUiKey++);
 
-    emit(state.copyWith(ingredients: list));
+    emit(state.copyWith(ingredients: list, ingredientUiKeys: keys));
   }
 
   void removeIngredient(int index) {
-    final list = List<IngredientModel>.from(state.ingredients)..removeAt(index);
+    final list = List<Ingredient>.from(state.ingredients)..removeAt(index);
+    final keys = List<int>.from(state.ingredientUiKeys)..removeAt(index);
 
-    emit(state.copyWith(ingredients: list));
+    emit(state.copyWith(ingredients: list, ingredientUiKeys: keys));
   }
 
   void updateIngredient(
     int ingredientIndex, {
-    double? amount,
-    IngredientUnitModel? measure,
+    Object? amount = _noChange,
+    Object? unit = _noChange,
     String? name,
   }) {
-    final ingredient = state.ingredients[ingredientIndex];
-    ingredient
-      ..amount = amount ?? ingredient.amount
-      ..measure = measure ?? ingredient.measure
-      ..name = name ?? ingredient.name;
+    final current = state.ingredients[ingredientIndex];
+    final updated = Ingredient(
+      amount: identical(amount, _noChange)
+          ? current.amount
+          : amount as double?,
+      unit: identical(unit, _noChange) ? current.unit : unit as IngredientUnit?,
+      name: name ?? current.name,
+    );
+    final list = List<Ingredient>.from(state.ingredients)
+      ..[ingredientIndex] = updated;
 
-    emit(state.copyWith(ingredients: List.from(state.ingredients)));
+    emit(state.copyWith(ingredients: list));
   }
 
-  // PASOS
   void addStep() {
-    final list = List<PreparationStepModel>.from(state.steps)
-      ..add(
-        PreparationStepModel(
-          tempId: _tempStepId--,
-          stepNumber: state.steps.length + 1,
-          description: '',
-        ),
-      );
+    final list = List<PreparationStep>.from(state.steps)
+      ..add(PreparationStep(order: state.steps.length + 1, description: ''));
+    final keys = List<int>.from(state.stepUiKeys)..add(_nextStepUiKey++);
 
-    emit(state.copyWith(steps: list));
+    emit(state.copyWith(steps: list, stepUiKeys: keys));
   }
 
-  void updateStepById(int id, String description) {
-    final steps = state.steps.map((s) {
-      if (s.tempId == id) {
-        return s.copyWith(description: description);
-      }
-      return s;
-    }).toList();
+  void updateStep(int index, String description) {
+    final current = state.steps[index];
+    final steps = List<PreparationStep>.from(state.steps)
+      ..[index] = PreparationStep(order: current.order, description: description);
 
     emit(state.copyWith(steps: steps));
   }
 
-  void removeStepById(int id) {
-    final steps = state.steps.where((s) => s.tempId != id).toList();
-
+  void removeStep(int index) {
+    final steps = List<PreparationStep>.from(state.steps)..removeAt(index);
+    final keys = List<int>.from(state.stepUiKeys)..removeAt(index);
     for (int i = 0; i < steps.length; i++) {
-      steps[i] = steps[i].copyWith(stepNumber: i + 1);
+      steps[i] = PreparationStep(order: i + 1, description: steps[i].description);
     }
 
-    emit(state.copyWith(steps: steps));
+    emit(state.copyWith(steps: steps, stepUiKeys: keys));
   }
 
   void validateForm() {
     final errors = <String, String>{};
 
-    // 🧾 Nombre
     if (state.title.trim().isEmpty) {
       errors['title'] = 'El nombre es obligatorio';
     }
 
-    // ⛓️‍💥 Link
     if (state.sourceLink != null &&
         state.sourceLink!.isNotEmpty &&
         !isValidUrl(state.sourceLink!.trim())) {
       errors['link'] = 'Ingrese una URL válida';
     }
 
-    // 🥕 Ingredientes
+    if (state.categories.isEmpty) {
+      errors['categories'] = 'Debe seleccionar al menos una categoría';
+    }
+
     if (state.ingredients.isEmpty) {
       errors['ingredients'] = 'Debe agregar al menos un ingrediente';
     } else {
@@ -124,13 +120,12 @@ class RecipeFormCubit extends Cubit<RecipeFormState> {
           errors['ingredient_amount_$i'] = 'Cantidad inválida';
         }
 
-        if (ing.measure == null || ing.measure!.displayName.isEmpty) {
+        if (ing.unit == null || ing.unit!.name.trim().isEmpty) {
           errors['ingredient_unit_$i'] = 'Unidad no seleccionada';
         }
       }
     }
 
-    // 🍳 Pasos
     if (state.steps.isEmpty) {
       errors['steps'] = 'Debe agregar al menos un paso';
     } else {
@@ -141,7 +136,6 @@ class RecipeFormCubit extends Cubit<RecipeFormState> {
       }
     }
 
-    //  📷 Imágenes
     if (state.images.isEmpty) {
       errors['images'] = 'Debe agregar al menos una imagen';
     }
@@ -150,7 +144,7 @@ class RecipeFormCubit extends Cubit<RecipeFormState> {
   }
 
   void reorderSteps(int oldIndex, int newIndex) {
-    final steps = List<PreparationStepModel>.from(state.steps);
+    final steps = List<PreparationStep>.from(state.steps);
 
     if (newIndex > oldIndex) {
       newIndex -= 1;
@@ -158,27 +152,30 @@ class RecipeFormCubit extends Cubit<RecipeFormState> {
 
     final step = steps.removeAt(oldIndex);
     steps.insert(newIndex, step);
+    final keys = List<int>.from(state.stepUiKeys);
+    final movedKey = keys.removeAt(oldIndex);
+    keys.insert(newIndex, movedKey);
 
-    // Recalcular stepNumber
     for (int i = 0; i < steps.length; i++) {
-      steps[i] = steps[i].copyWith(stepNumber: i + 1);
+      steps[i] = PreparationStep(order: i + 1, description: steps[i].description);
     }
 
-    emit(state.copyWith(steps: steps));
+    emit(state.copyWith(steps: steps, stepUiKeys: keys));
   }
 
   void reorderIngredients(int oldIndex, int newIndex) {
-    final ingredients = List<IngredientModel>.from(state.ingredients);
-
-    // Ajuste requerido por ReorderableListView
+    final ingredients = List<Ingredient>.from(state.ingredients);
+    final keys = List<int>.from(state.ingredientUiKeys);
     if (newIndex > oldIndex) {
       newIndex--;
     }
 
     final movedIngredient = ingredients.removeAt(oldIndex);
     ingredients.insert(newIndex, movedIngredient);
+    final movedKey = keys.removeAt(oldIndex);
+    keys.insert(newIndex, movedKey);
 
-    emit(state.copyWith(ingredients: ingredients));
+    emit(state.copyWith(ingredients: ingredients, ingredientUiKeys: keys));
   }
 
   Future<void> pickImage(ImageSource source) async {
@@ -192,19 +189,20 @@ class RecipeFormCubit extends Cubit<RecipeFormState> {
 
     if (pickedFile == null) return;
 
-    final updated = List<MyImageModel>.from(state.images)
-      ..add(MyImageModel(file: File(pickedFile.path)));
+    final updated = List<RecipeImageUpload>.from(state.images)
+      ..add(RecipeImageUpload(file: File(pickedFile.path)));
 
     emit(state.copyWith(images: updated));
   }
 
   void removeImage(int index) {
-    final updated = List<MyImageModel>.from(state.images)..removeAt(index);
+    final updated = List<RecipeImageUpload>.from(state.images)
+      ..removeAt(index);
     emit(state.copyWith(images: updated));
   }
 
-  void toggleCategory(CategoryModel category) {
-    final updated = List<CategoryModel>.from(state.categories);
+  void toggleCategory(Category category) {
+    final updated = List<Category>.from(state.categories);
 
     if (updated.any((c) => c.id == category.id)) {
       updated.removeWhere((c) => c.id == category.id);
@@ -215,26 +213,22 @@ class RecipeFormCubit extends Cubit<RecipeFormState> {
     emit(state.copyWith(categories: updated));
   }
 
-  bool isCategorySelected(CategoryModel category) {
+  bool isCategorySelected(Category category) {
     return state.categories.any((c) => c.id == category.id);
   }
 
-  RecipeModel buildPreviewRecipe() {
-    return RecipeModel(
-      id: -1, // dummy
+  Recipe buildRecipe() {
+    return Recipe(
+      id: 0,
       title: state.title,
       subtitle: state.description,
-      images: state.images,
+      images: const [],
       ingredients: state.ingredients,
       categories: state.categories,
-      preparationSteps: state.steps,
+      steps: state.steps,
       link: state.sourceLink,
-      author: state.author,
+      author: null,
     );
-  }
-
-  void setAuthor(UsuarioModel user) {
-    emit(state.copyWith(author: user));
   }
 
   Future<void> submit() async {
@@ -242,13 +236,19 @@ class RecipeFormCubit extends Cubit<RecipeFormState> {
 
     if (!state.isValid) return;
 
-    emit(state.copyWith(isSubmitting: true, submitError: null));
+    emit(
+      state.copyWith(
+        isSubmitting: true,
+        submitSuccess: false,
+        clearSubmitError: true,
+      ),
+    );
 
     try {
-      final payload = _buildRequest();
-
-      await recipesRepository.createRecipe(
-        payload: payload,
+      final recipe = buildRecipe();
+      final recipeId = await recipesRepository.createRecipe(recipe);
+      await recipesRepository.uploadRecipeImages(
+        recipeId: recipeId,
         images: state.images,
       );
 
@@ -262,33 +262,6 @@ class RecipeFormCubit extends Cubit<RecipeFormState> {
       );
     }
   }
-
-  Map<String, dynamic> _buildRequest() {
-    return {
-      "title": state.title,
-      "subtitle": state.description,
-      "link": state.sourceLink,
-      "categories": state.categories.map((c) => c.id).toList(),
-      "ingredients": state.ingredients
-          .map(
-            (i) => {
-              "amount": i.amount,
-              "measure_unit_id": i.measure?.id,
-              "name": i.name,
-            },
-          )
-          .toList(),
-
-      "preparationSteps": state.steps
-          .asMap()
-          .entries
-          .map(
-            (entry) => {
-              "step_number": entry.key + 1,
-              "description": entry.value.description,
-            },
-          )
-          .toList(),
-    };
-  }
 }
+
+const Object _noChange = Object();

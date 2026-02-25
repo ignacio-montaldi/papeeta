@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:papeeta/bloc/blocs.dart';
-import 'package:papeeta/models/models.dart';
+import 'package:papeeta/bloc/recipe_form/recipe_form_cubit.dart';
+import 'package:papeeta/core/domain/entities/category.dart';
+import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
 import 'package:papeeta/widgets/search_field.dart';
 
 class CategorySelectorSheet extends StatefulWidget {
@@ -28,13 +29,21 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet> {
                 setState(() => query = v);
               },
             ),
-
             const SizedBox(height: 12),
-
             Expanded(
               child: BlocBuilder<CategoryBloc, CategoryState>(
                 builder: (context, state) {
-                  final categories = state.categories ?? [];
+                  if (state is CategoryLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (state is CategoryError) {
+                    return Center(child: Text(state.message));
+                  }
+
+                  final categories = state is CategoryLoaded
+                      ? state.categories
+                      : <Category>[];
 
                   final filtered = categories
                       .where(
@@ -44,7 +53,6 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet> {
                       .toList();
 
                   final grouped = _groupByGroupId(filtered);
-
                   final sortedEntries = grouped.entries.toList()
                     ..sort((a, b) => a.key.compareTo(b.key));
 
@@ -53,9 +61,9 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet> {
                       return ListView(
                         children: sortedEntries.map((entry) {
                           return _CategoryGroup(
-                            groupName: entry.value.first.group?.name ?? "",
+                            groupName: entry.value.first.group?.name ?? '',
                             categories: entry.value,
-                            selected: formCubit.state.categories,
+                            selected: formState.categories,
                             onToggle: formCubit.toggleCategory,
                           );
                         }).toList(),
@@ -65,9 +73,7 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet> {
                 },
               ),
             ),
-
             const SizedBox(height: 8),
-
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Listo'),
@@ -78,13 +84,11 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet> {
     );
   }
 
-  Map<int, List<CategoryModel>> _groupByGroupId(
-    List<CategoryModel> categories,
-  ) {
-    final map = <int, List<CategoryModel>>{};
+  Map<int, List<Category>> _groupByGroupId(List<Category> categories) {
+    final map = <int, List<Category>>{};
 
     for (final c in categories) {
-      map.putIfAbsent(c.groupId!, () => []).add(c);
+      map.putIfAbsent(c.groupId ?? -1, () => []).add(c);
     }
 
     return map;
@@ -93,9 +97,9 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet> {
 
 class _CategoryGroup extends StatelessWidget {
   final String groupName;
-  final List<CategoryModel> categories;
-  final List<CategoryModel> selected;
-  final void Function(CategoryModel) onToggle;
+  final List<Category> categories;
+  final List<Category> selected;
+  final void Function(Category) onToggle;
 
   const _CategoryGroup({
     required this.groupName,

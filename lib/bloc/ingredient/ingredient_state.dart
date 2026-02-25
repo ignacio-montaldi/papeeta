@@ -9,7 +9,7 @@ class IngredientInitial extends IngredientState {}
 class IngredientLoading extends IngredientState {}
 
 class IngredientUnitsLoaded extends IngredientState {
-  final List<IngredientUnitModel> units;
+  final List<IngredientUnit> units;
   const IngredientUnitsLoaded(this.units);
 }
 

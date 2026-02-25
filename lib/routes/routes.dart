@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:papeeta/bloc/blocs.dart';
+import 'package:papeeta/core/di/injection.dart';
+import 'package:papeeta/features/recipes/domain/repositories/recipes_repository.dart'
+    as recipes_domain;
 import 'package:papeeta/pages/pages.dart';
-import 'package:papeeta/repositories/repositories.dart';
 
 final Map<String, Widget Function(BuildContext)> appRoutes = {
   'home': (_) => const HomePage(),
@@ -16,7 +18,8 @@ final Map<String, Widget Function(BuildContext)> appRoutes = {
   'categories': (_) => CategoriesPage(),
   'recipeList': (_) => const RecipeListPage(),
   'addRecipe': (_) => BlocProvider(
-    create: (context) => RecipeFormCubit(context.read<RecipesRepository>()),
+    create: (context) =>
+        RecipeFormCubit(getIt<recipes_domain.RecipesRepository>()),
     child: const AddRecipePage(),
   ),
 };
