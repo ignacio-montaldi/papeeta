@@ -1,4 +1,4 @@
-package com.example.papeeta
+package om.ignaciomontaldi.papeeta
 
 import io.flutter.embedding.android.FlutterActivity
 

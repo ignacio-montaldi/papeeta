@@ -45,49 +45,43 @@ class _RecipePageState extends State<RecipePage> {
     final double appBarExpandedHeight = 300;
 
     if (widget.previewRecipe != null) {
-      return SafeArea(
-        top: false,
-        child: Scaffold(
-          body: _RecipeContent(
-            recipe: widget.previewRecipe!,
-            appBarExpandedHeight: appBarExpandedHeight,
-            previewImages: widget.previewImages,
-          ),
+      return Scaffold(
+        body: _RecipeContent(
+          recipe: widget.previewRecipe!,
+          appBarExpandedHeight: appBarExpandedHeight,
+          previewImages: widget.previewImages,
         ),
       );
     }
 
-    return SafeArea(
-      top: false,
-      child: Scaffold(
-        body: BlocBuilder<RecipeBloc, RecipeState>(
-          builder: (context, state) {
-            if (state is RecipeLoading || state is RecipeInitial) {
-              return const Center(child: CircularProgressIndicator());
-            }
+    return Scaffold(
+      body: BlocBuilder<RecipeBloc, RecipeState>(
+        builder: (context, state) {
+          if (state is RecipeLoading || state is RecipeInitial) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            if (state is RecipeError) {
-              return Center(child: Text(state.message));
-            }
+          if (state is RecipeError) {
+            return Center(child: Text(state.message));
+          }
 
-            // Según la estrategia de Bloc que elijas (si mantienes las clases selladas actuales)
-            Recipe? recipe;
-            if (state is RecipeDetailLoaded) {
-              recipe = state.recipe;
-            } else if (state is RecipeListLoaded) {
-              recipe = state.selectedRecipe;
-            }
+          // Según la estrategia de Bloc que elijas (si mantienes las clases selladas actuales)
+          Recipe? recipe;
+          if (state is RecipeDetailLoaded) {
+            recipe = state.recipe;
+          } else if (state is RecipeListLoaded) {
+            recipe = state.selectedRecipe;
+          }
 
-            if (recipe == null) {
-              return const Center(child: Text('Cargando receta...'));
-            }
+          if (recipe == null) {
+            return const Center(child: Text('Cargando receta...'));
+          }
 
-            return _RecipeContent(
-              recipe: recipe,
-              appBarExpandedHeight: appBarExpandedHeight,
-            );
-          },
-        ),
+          return _RecipeContent(
+            recipe: recipe,
+            appBarExpandedHeight: appBarExpandedHeight,
+          );
+        },
       ),
     );
   }
@@ -124,8 +118,9 @@ class _RecipeContent extends StatelessWidget {
         ),
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            padding: const EdgeInsets.all(20),
             child: ListView(
+              padding: EdgeInsets.zero,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               children: [
@@ -145,7 +140,8 @@ class _RecipeContent extends StatelessWidget {
                 const SizedBox(height: 5),
                 _Link(link: recipe.link),
                 const SizedBox(height: 10),
-                if (recipe.author != null) _AuthorWidget(author: recipe.author!),
+                if (recipe.author != null)
+                  _AuthorWidget(author: recipe.author!),
               ],
             ),
           ),
@@ -192,7 +188,9 @@ class _AppBarBodyState extends State<_AppBarBody> {
   Widget build(BuildContext context) {
     final images = widget.recipe.images;
     final hasPreviewImages = widget.previewImages.isNotEmpty;
-    final imageCount = hasPreviewImages ? widget.previewImages.length : images.length;
+    final imageCount = hasPreviewImages
+        ? widget.previewImages.length
+        : images.length;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -244,8 +242,9 @@ class _AppBarBodyState extends State<_AppBarBody> {
                             child: CachedNetworkImage(
                               imageUrl: images[index].url,
                               fit: BoxFit.cover,
-                              placeholder: (context, url) =>
-                                  const Center(child: CircularProgressIndicator()),
+                              placeholder: (context, url) => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
                               errorWidget: (context, url, error) =>
                                   const Icon(Icons.broken_image),
                             ),

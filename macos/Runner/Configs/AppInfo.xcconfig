@@ -8,7 +8,7 @@
 PRODUCT_NAME = papeeta_app
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.papeetaApp
+PRODUCT_BUNDLE_IDENTIFIER = om.ignaciomontaldi.papeeta
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2025 com.example. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2025 com.ignaciomontaldi. All rights reserved.
