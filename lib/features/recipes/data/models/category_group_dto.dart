@@ -9,7 +9,7 @@ class CategoryGroupDto {
     return CategoryGroupDto(
       id: json['id'],
       name: json['name'],
-      imageUrl: json['image_url'],
+      imageUrl: json['image_url'] ?? json['image'],
     );
   }
 }

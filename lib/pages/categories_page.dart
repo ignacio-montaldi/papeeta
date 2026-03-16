@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:papeeta/bloc/blocs.dart';
+import 'package:papeeta/core/domain/entities/category.dart';
+import 'package:papeeta/core/domain/entities/category_group.dart';
+import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
+import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
 import 'package:papeeta/models/models.dart';
 import 'package:papeeta/widgets/widgets.dart';
 
@@ -12,103 +15,131 @@ class CategoriesPage extends StatefulWidget {
 }
 
 class _CategoriesPageState extends State<CategoriesPage> {
+  int? _selectedGroupId;
+
   @override
   void initState() {
     super.initState();
-    final categoryBloc = BlocProvider.of<CategoryBloc>(context, listen: false);
-    categoryBloc.getCategoriesList();
-    categoryBloc.getCategoriesGroupList();
+    context.read<CategoryBloc>().add(LoadCategories());
   }
 
   @override
   Widget build(BuildContext context) {
-    final categoryBloc = BlocProvider.of<CategoryBloc>(context, listen: false);
-
     return Scaffold(
       appBar: AppBar(
-        title: Text('Categorías', style: const TextStyle(color: Colors.white)),
+        title: const Text('Categorías', style: TextStyle(color: Colors.white)),
         elevation: 1,
         backgroundColor: Theme.of(context).colorScheme.onPrimary,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: BlocBuilder<CategoryBloc, CategoryState>(
         builder: (context, state) {
-          final categories = state.categories;
-          final groups = state.groups;
-
-          if (categories == null || groups == null) {
+          if (state is CategoryInitial || state is CategoryLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (categories.isEmpty && groups.isEmpty) {
-            return const Center(
-              child: Text('No se encontraron categorías ni grupos.'),
+          if (state is CategoryError) {
+            return Center(child: Text(state.message));
+          }
+
+          if (state is CategoryLoaded) {
+            final categories = state.categories;
+            final groups = _uniqueGroupsFrom(categories);
+
+            if (categories.isEmpty && groups.isEmpty) {
+              return const Center(
+                child: Text('No se encontraron categorías ni grupos.'),
+              );
+            }
+
+            final filteredCategories = _selectedGroupId == null
+                ? categories
+                : categories
+                    .where((c) =>
+                        c.groupId == _selectedGroupId ||
+                        c.group?.id == _selectedGroupId)
+                    .toList();
+
+            return ListView(
+              padding: const EdgeInsets.only(top: 20),
+              children: [
+                if (groups.isNotEmpty)
+                  _GroupsList(
+                    groups: groups,
+                    selectedGroupId: _selectedGroupId,
+                    onGroupSelected: (groupId) {
+                      setState(() => _selectedGroupId = groupId);
+                    },
+                  ),
+                const SizedBox(height: 20),
+                if (filteredCategories.isNotEmpty)
+                  _CategoryGrid(
+                    categories: filteredCategories,
+                    onCategoryTap: (category) {
+                      context.read<RecipeBloc>().add(
+                            LoadRecipesByCategory(category.id),
+                          );
+                      Navigator.pushNamed(context, 'recipeList', arguments: category);
+                    },
+                  )
+                else
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text('No se encontraron categorías para este grupo.'),
+                    ),
+                  ),
+              ],
             );
           }
 
-          return ListView(
-            padding: EdgeInsets.only(top: 20),
-            children: [
-              if (groups.isNotEmpty) _GroupsList(groups: groups),
-              const SizedBox(height: 20),
-              if (categories.isNotEmpty)
-                _CategoryGrid(
-                  categories: categories,
-                  categoryBloc: categoryBloc,
-                )
-              else
-                const Center(
-                  child: Text('No se encontraron categorías para este grupo.'),
-                ),
-            ],
-          );
+          return const SizedBox.shrink();
         },
       ),
     );
   }
+
+  List<CategoryGroup> _uniqueGroupsFrom(List<Category> categories) {
+    final seenIds = <int>{};
+    final result = <CategoryGroup>[];
+    for (final c in categories) {
+      if (c.group != null && seenIds.add(c.group!.id)) {
+        result.add(c.group!);
+      }
+    }
+    return result;
+  }
 }
 
 class _CategoryGrid extends StatelessWidget {
-  const _CategoryGrid({required this.categories, required this.categoryBloc});
+  const _CategoryGrid({
+    required this.categories,
+    required this.onCategoryTap,
+  });
 
-  final List<CategoryModel> categories;
-  final CategoryBloc categoryBloc;
+  final List<Category> categories;
+  final void Function(Category category) onCategoryTap;
 
   @override
   Widget build(BuildContext context) {
-    final List<CategoryModel> filteredCategories = categories
-        .where(
-          (category) =>
-              category.groupId ==
-              (categoryBloc.state.groupId ?? category.groupId),
-        )
-        .toList();
     return GridView.builder(
-      physics: NeverScrollableScrollPhysics(),
+      physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         mainAxisSpacing: 15,
         crossAxisSpacing: 15,
         mainAxisExtent: 150,
       ),
-      padding: EdgeInsets.only(bottom: 20.0, left: 20, right: 20),
-      itemCount: filteredCategories.length,
+      padding: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
+      itemCount: categories.length,
       itemBuilder: (context, index) {
-        final categoryName = filteredCategories[index].name;
-        final categoryImageUrl = filteredCategories[index].imageUrl;
+        final category = categories[index];
         return GestureDetector(
-          onTap: () {
-            categoryBloc.add(
-              SelectedCategory(category: filteredCategories[index]),
-            );
-            Navigator.pushNamed(context, 'recipeList');
-          },
+          onTap: () => onCategoryTap(category),
           child: Container(
             height: 50,
             decoration: const BoxDecoration(
@@ -127,24 +158,24 @@ class _CategoryGrid extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Padding(
-                  padding: EdgeInsetsGeometry.symmetric(horizontal: 30),
-                  child: categoryImageUrl != null
+                  padding: const EdgeInsets.symmetric(horizontal: 30),
+                  child: category.imageUrl != null && category.imageUrl!.isNotEmpty
                       ? MyImageWidget(
-                          image: MyImageModel(url: categoryImageUrl),
+                          image: MyImageModel(url: category.imageUrl!),
                           height: 60,
                           fit: BoxFit.cover,
                         )
-                      : Icon(Icons.broken_image, color: Colors.grey),
+                      : const Icon(Icons.broken_image, color: Colors.grey),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Padding(
-                  padding: EdgeInsetsGeometry.symmetric(horizontal: 15),
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
                   child: Text(
-                    categoryName,
+                    category.name,
                     textAlign: TextAlign.center,
                     maxLines: 3,
                     style: TextStyle(
-                      fontSize: categoryName.length < 25 ? 15 : 14,
+                      fontSize: category.name.length < 25 ? 15 : 14,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -158,28 +189,19 @@ class _CategoryGrid extends StatelessWidget {
   }
 }
 
-class _GroupsList extends StatefulWidget {
-  final List<GroupModel> groups;
+class _GroupsList extends StatelessWidget {
+  const _GroupsList({
+    required this.groups,
+    required this.selectedGroupId,
+    required this.onGroupSelected,
+  });
 
-  const _GroupsList({required this.groups});
-
-  @override
-  State<_GroupsList> createState() => _GroupsListState();
-}
-
-class _GroupsListState extends State<_GroupsList> {
-  late int selectedIndex;
-
-  @override
-  void initState() {
-    super.initState();
-    selectedIndex = 0;
-  }
+  final List<CategoryGroup> groups;
+  final int? selectedGroupId;
+  final void Function(int? groupId) onGroupSelected;
 
   @override
   Widget build(BuildContext context) {
-    final groups = widget.groups;
-
     return SizedBox(
       height: 120,
       child: ListView.builder(
@@ -187,30 +209,23 @@ class _GroupsListState extends State<_GroupsList> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 15),
         itemBuilder: (context, index) {
-          final bool isSelected = selectedIndex == index;
-
           if (index == 0) {
+            final isSelected = selectedGroupId == null;
             return _GroupItem(
               label: 'Todas',
               icon: Icons.restaurant_menu,
               selected: isSelected,
-              onTap: () {
-                setState(() => selectedIndex = index);
-              },
+              onTap: () => onGroupSelected(null),
             );
           }
 
           final group = groups[index - 1];
+          final isSelected = selectedGroupId == group.id;
           return _GroupItem(
             label: group.name,
             imageUrl: group.imageUrl,
             selected: isSelected,
-            onTap: () {
-              setState(() => selectedIndex = index);
-              context.read<CategoryBloc>().add(
-                FilterByGroup(groupId: group.id),
-              );
-            },
+            onTap: () => onGroupSelected(group.id),
           );
         },
       ),
@@ -264,7 +279,7 @@ class _GroupItem extends StatelessWidget {
               child: CircleAvatar(
                 radius: 35,
                 backgroundColor: Colors.white,
-                child: imageUrl != null
+                child: imageUrl != null && imageUrl!.isNotEmpty
                     ? MyImageWidget(
                         image: MyImageModel(url: imageUrl!),
                         width: 45,
@@ -282,7 +297,7 @@ class _GroupItem extends StatelessWidget {
             label,
             maxLines: 2,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
           ),
         ),
       ],

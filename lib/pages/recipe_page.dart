@@ -57,7 +57,9 @@ class _RecipePageState extends State<RecipePage> {
     return Scaffold(
       body: BlocBuilder<RecipeBloc, RecipeState>(
         builder: (context, state) {
-          if (state is RecipeLoading || state is RecipeInitial) {
+          if (state is RecipeDetailLoading ||
+              state is RecipeInitial ||
+              state is RecipeListLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
@@ -65,22 +67,14 @@ class _RecipePageState extends State<RecipePage> {
             return Center(child: Text(state.message));
           }
 
-          // Según la estrategia de Bloc que elijas (si mantienes las clases selladas actuales)
-          Recipe? recipe;
           if (state is RecipeDetailLoaded) {
-            recipe = state.recipe;
-          } else if (state is RecipeListLoaded) {
-            recipe = state.selectedRecipe;
+            return _RecipeContent(
+              recipe: state.recipe,
+              appBarExpandedHeight: appBarExpandedHeight,
+            );
           }
 
-          if (recipe == null) {
-            return const Center(child: Text('Cargando receta...'));
-          }
-
-          return _RecipeContent(
-            recipe: recipe,
-            appBarExpandedHeight: appBarExpandedHeight,
-          );
+          return const Center(child: Text('Cargando receta...'));
         },
       ),
     );

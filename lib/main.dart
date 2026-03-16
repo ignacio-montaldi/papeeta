@@ -25,16 +25,10 @@ class MyApp extends StatelessWidget {
       child: MultiBlocProvider(
         providers: [
           BlocProvider(
-            create: (context) =>
-                old_blocs.CategoryBloc(categoriesService: CategoriesService()),
-          ),
-          BlocProvider(
             create: (context) => old_blocs.IngredientBloc(
               ingredientService: IngredientService(),
             ),
           ),
-
-          // Clean Architecture
           BlocProvider<RecipeBloc>(create: (_) => getIt<RecipeBloc>()),
           BlocProvider<CategoryBloc>(create: (_) => getIt<CategoryBloc>()),
         ],

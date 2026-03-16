@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:papeeta/core/domain/entities/category.dart';
 import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
+import 'package:papeeta/features/recipes/domain/entities/recipe.dart';
 import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
@@ -63,28 +64,23 @@ class _HomePageState extends State<HomePage> {
       ),
       body: BlocListener<RecipeBloc, RecipeState>(
         listener: (context, recipeState) {
-          if (recipeState is RecipeListLoaded || recipeState is RecipeError) {
-            if (recipeState is RecipeError) {
-              _refreshController.refreshFailed();
-            } else {
+          switch (recipeState) {
+            case RecipeListLoaded():
               _refreshController.refreshCompleted();
-            }
+            case RecipeError():
+              _refreshController.refreshFailed();
+            default:
+              break;
           }
         },
         child: BlocBuilder<CategoryBloc, CategoryState>(
           builder: (context, categoryState) {
             return BlocBuilder<RecipeBloc, RecipeState>(
               builder: (context, recipeState) {
-                // Lógica principal
-                final hasRecipes = recipeState.currentRecipes != null;
-                final isSilentLoading =
-                    recipeState is RecipeLoading && hasRecipes;
-                // final isSilentError = recipeState is RecipeError && hasRecipes;
-
                 if (categoryState is CategoryLoading ||
                     categoryState is CategoryInitial ||
-                    (recipeState is RecipeInitial) ||
-                    (recipeState is RecipeLoading && !hasRecipes)) {
+                    recipeState is RecipeInitial ||
+                    recipeState is RecipeListLoading) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
@@ -92,13 +88,17 @@ class _HomePageState extends State<HomePage> {
                   return Center(child: Text(categoryState.message));
                 }
 
-                if (recipeState is RecipeError && !hasRecipes) {
+                if (recipeState is RecipeError) {
                   return Center(child: Text(recipeState.message));
                 }
 
-                if (categoryState is CategoryLoaded && hasRecipes) {
+                if (categoryState is CategoryLoaded) {
                   final categories = categoryState.categories;
-                  final recipes = recipeState.currentRecipes!;
+                  final recipes = switch (recipeState) {
+                    RecipeListLoaded(:final recipes) => recipes,
+                    RecipeDetailLoaded(:final recipes) => recipes,
+                    _ => <Recipe>[],
+                  };
 
                   if (categories.isEmpty && recipes.isEmpty) {
                     return const Center(
@@ -106,36 +106,25 @@ class _HomePageState extends State<HomePage> {
                     );
                   }
 
-                  return Stack(
-                    children: [
-                      SmartRefresher(
-                        controller: _refreshController,
-                        enablePullDown: true,
-                        onRefresh: _onRefresh,
-                        physics: const BouncingScrollPhysics(),
-                        child: ListView(
-                          padding: const EdgeInsets.only(top: 20),
-                          children: [
-                            if (categories.isNotEmpty)
-                              _CategoriesList(categories: categories),
-                            const SizedBox(height: 20),
-                            if (recipes.isNotEmpty)
-                              RecipeList(recipes: recipes)
-                            else
-                              const Center(
-                                child: Text('No se encontraron recetas.'),
-                              ),
-                          ],
-                        ),
-                      ),
-                      if (isSilentLoading)
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          child: const LinearProgressIndicator(),
-                        ),
-                    ],
+                  return SmartRefresher(
+                    controller: _refreshController,
+                    enablePullDown: true,
+                    onRefresh: _onRefresh,
+                    physics: const BouncingScrollPhysics(),
+                    child: ListView(
+                      padding: const EdgeInsets.only(top: 20),
+                      children: [
+                        if (categories.isNotEmpty)
+                          _CategoriesList(categories: categories),
+                        const SizedBox(height: 20),
+                        if (recipes.isNotEmpty)
+                          RecipeList(recipes: recipes)
+                        else
+                          const Center(
+                            child: Text('No se encontraron recetas.'),
+                          ),
+                      ],
+                    ),
                   );
                 }
 

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:papeeta/features/recipes/domain/entities/recipe.dart';
 import 'package:papeeta/features/recipes/domain/repositories/recipes_repository.dart';
@@ -9,31 +10,44 @@ part 'recipe_state.dart';
 class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
   final RecipesRepository repository;
 
+  List<Recipe>? _cachedHomeRecipes;
+
   RecipeBloc(this.repository) : super(const RecipeInitial()) {
     on<LoadRecipes>(_onLoadRecipes);
     on<LoadRecipeDetail>(_onLoadRecipeDetail);
     on<LoadRecipesByCategory>(_onLoadByCategory);
     on<SelectRecipe>(_onSelectRecipe);
+    on<RestoreHomeRecipes>(_onRestoreHomeRecipes);
+  }
+
+  List<Recipe> _currentRecipesList(RecipeState state) {
+    return switch (state) {
+      RecipeListLoaded(:final recipes) => recipes,
+      RecipeDetailLoaded(:final recipes) => recipes,
+      _ => [],
+    };
   }
 
   Future<void> _onLoadRecipes(
     LoadRecipes event,
     Emitter<RecipeState> emit,
   ) async {
-    final currentSelectedRecipe = state is RecipeListLoaded
-        ? (state as RecipeListLoaded).selectedRecipe
-        : state is RecipeDetailLoaded
-        ? (state as RecipeDetailLoaded).recipe
-        : null;
-
-    emit(RecipeLoading(recipes: state.currentRecipes));
+    emit(const RecipeListLoading());
     try {
       final recipes = await repository.getRecipes();
-      emit(RecipeListLoaded(recipes, selectedRecipe: currentSelectedRecipe));
+      _cachedHomeRecipes = recipes;
+      emit(RecipeListLoaded(recipes));
     } catch (e) {
-      emit(
-        RecipeError('Error al cargar recetas', recipes: state.currentRecipes),
-      );
+      emit(RecipeError('Error al cargar recetas'));
+    }
+  }
+
+  void _onRestoreHomeRecipes(
+    RestoreHomeRecipes event,
+    Emitter<RecipeState> emit,
+  ) {
+    if (_cachedHomeRecipes != null) {
+      emit(RecipeListLoaded(_cachedHomeRecipes!));
     }
   }
 
@@ -41,17 +55,15 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
     LoadRecipeDetail event,
     Emitter<RecipeState> emit,
   ) async {
-    emit(RecipeLoading(recipes: state.currentRecipes));
+    final previousRecipes = _currentRecipesList(state);
+    emit(RecipeDetailLoading(recipeId: event.id));
     try {
       final recipe = await repository.getRecipeById(event.id);
-      emit(RecipeDetailLoaded(recipe, recipes: state.currentRecipes));
+      emit(RecipeDetailLoaded(recipe, previousRecipes));
     } catch (e, stackTrace) {
-      print('=== ERROR EN _onLoadRecipeDetail ===');
-      print(e);
-      print(stackTrace);
-      emit(
-        RecipeError('Error al cargar la receta', recipes: state.currentRecipes),
-      );
+      debugPrint('Error en LoadRecipeDetail: $e');
+      debugPrint('$stackTrace');
+      emit(RecipeError('Error al cargar la receta'));
     }
   }
 
@@ -59,27 +71,17 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
     LoadRecipesByCategory event,
     Emitter<RecipeState> emit,
   ) async {
-    final currentSelectedRecipe = state is RecipeListLoaded
-        ? (state as RecipeListLoaded).selectedRecipe
-        : state is RecipeDetailLoaded
-        ? (state as RecipeDetailLoaded).recipe
-        : null;
-
-    emit(RecipeLoading(recipes: state.currentRecipes));
+    emit(const RecipeListLoading());
     try {
       final recipes = await repository.getRecipesByCategory(event.categoryId);
-      emit(RecipeListLoaded(recipes, selectedRecipe: currentSelectedRecipe));
+      emit(RecipeListLoaded(recipes));
     } catch (e) {
-      emit(
-        RecipeError(
-          'Error al cargar recetas por categoría',
-          recipes: state.currentRecipes,
-        ),
-      );
+      emit(RecipeError('Error al cargar recetas por categoría'));
     }
   }
 
   void _onSelectRecipe(SelectRecipe event, Emitter<RecipeState> emit) {
-    emit(RecipeDetailLoaded(event.recipe, recipes: state.currentRecipes));
+    final recipes = _currentRecipesList(state);
+    emit(RecipeDetailLoaded(event.recipe, recipes));
   }
 }

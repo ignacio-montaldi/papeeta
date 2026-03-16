@@ -34,3 +34,7 @@ final class SelectRecipe extends RecipeEvent {
   @override
   List<Object?> get props => [recipe.id];
 }
+
+final class RestoreHomeRecipes extends RecipeEvent {
+  const RestoreHomeRecipes();
+}

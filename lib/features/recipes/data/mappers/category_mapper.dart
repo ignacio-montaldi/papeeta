@@ -9,6 +9,7 @@ class CategoryMapper {
     return Category(
       id: dto.id,
       name: dto.name,
+      groupId: dto.groupId ?? dto.group?.id,
       imageUrl: (dto.imageUrl != null && dto.imageUrl!.isNotEmpty)
           ? (dto.imageUrl!.startsWith('http')
                 ? dto.imageUrl
