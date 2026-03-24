@@ -24,10 +24,8 @@ class MyApp extends StatelessWidget {
       providers: [ChangeNotifierProvider(create: (_) => AuthService())],
       child: MultiBlocProvider(
         providers: [
-          BlocProvider(
-            create: (context) => old_blocs.IngredientBloc(
-              ingredientService: IngredientService(),
-            ),
+          BlocProvider<old_blocs.IngredientBloc>(
+            create: (_) => getIt<old_blocs.IngredientBloc>(),
           ),
           BlocProvider<RecipeBloc>(create: (_) => getIt<RecipeBloc>()),
           BlocProvider<CategoryBloc>(create: (_) => getIt<CategoryBloc>()),

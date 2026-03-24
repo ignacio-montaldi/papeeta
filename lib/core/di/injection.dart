@@ -12,6 +12,11 @@ import 'package:papeeta/features/recipes/data/repositories/recipes_repository_im
 import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
 import 'package:papeeta/global/enviroment.dart';
 import 'package:papeeta/services/papeeta_interceptor.dart';
+import 'package:papeeta/features/ingredients/data/datasources/ingredients_remote_datasource.dart';
+import 'package:papeeta/features/ingredients/data/datasources/ingredients_remote_datasource_impl.dart';
+import 'package:papeeta/features/ingredients/domain/repositories/ingredient_repository.dart';
+import 'package:papeeta/features/ingredients/data/repositories/ingredient_repository_impl.dart';
+import 'package:papeeta/features/ingredients/presentation/bloc/ingredient_bloc.dart';
 
 final getIt = GetIt.instance;
 
@@ -19,6 +24,7 @@ void setupDependencies() {
   _registerDio();
   _registerRecipes();
   _registerCategories();
+  _registerIngredients();
 }
 
 void _registerDio() {
@@ -63,5 +69,19 @@ void _registerCategories() {
 
   getIt.registerFactory<CategoryBloc>(
     () => CategoryBloc(getIt<CategoryRepository>()),
+  );
+}
+
+void _registerIngredients() {
+  getIt.registerLazySingleton<IngredientsRemoteDataSource>(
+    () => IngredientsRemoteDataSourceImpl(getIt<Dio>()),
+  );
+
+  getIt.registerLazySingleton<IngredientRepository>(
+    () => IngredientRepositoryImpl(getIt<IngredientsRemoteDataSource>()),
+  );
+
+  getIt.registerFactory<IngredientBloc>(
+    () => IngredientBloc(repository: getIt<IngredientRepository>()),
   );
 }

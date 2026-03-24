@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:papeeta/bloc/recipe_form/recipe_form_cubit.dart';
+import 'package:papeeta/features/recipes/presentation/bloc/recipe_form/recipe_form_cubit.dart';
 import 'package:papeeta/core/domain/entities/category.dart';
 import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
 import 'package:papeeta/widgets/search_field.dart';
