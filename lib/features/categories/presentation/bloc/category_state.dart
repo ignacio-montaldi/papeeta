@@ -17,10 +17,12 @@ final class CategoryLoading extends CategoryState {
 
 final class CategoryLoaded extends CategoryState {
   final List<Category> categories;
-  const CategoryLoaded(this.categories);
+  final List<CategoryGroup> groups;
+
+  const CategoryLoaded(this.categories, this.groups);
 
   @override
-  List<Object?> get props => [categories];
+  List<Object?> get props => [categories, groups];
 }
 
 final class CategoryError extends CategoryState {

@@ -47,7 +47,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
 
           if (state is CategoryLoaded) {
             final categories = state.categories;
-            final groups = _uniqueGroupsFrom(categories);
+            final groups = state.groups;
 
             if (categories.isEmpty && groups.isEmpty) {
               return const Center(
@@ -102,16 +102,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
     );
   }
 
-  List<CategoryGroup> _uniqueGroupsFrom(List<Category> categories) {
-    final seenIds = <int>{};
-    final result = <CategoryGroup>[];
-    for (final c in categories) {
-      if (c.group != null && seenIds.add(c.group!.id)) {
-        result.add(c.group!);
-      }
-    }
-    return result;
-  }
+
 }
 
 class _CategoryGrid extends StatelessWidget {
