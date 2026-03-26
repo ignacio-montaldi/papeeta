@@ -5,10 +5,9 @@ import 'package:papeeta/core/domain/entities/category.dart';
 import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
 import 'package:papeeta/features/recipes/domain/entities/recipe.dart';
 import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
-import 'package:provider/provider.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 
-import 'package:papeeta/services/auth_service.dart';
+import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:papeeta/widgets/widgets.dart';
 
 class HomePage extends StatefulWidget {
@@ -35,15 +34,16 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context);
-    final usuario = authService.usuario;
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        final userName = authState is Authenticated ? authState.user.name : 'Papeeta';
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          usuario.nombre,
-          style: const TextStyle(color: Colors.white),
-        ),
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(
+              userName,
+              style: const TextStyle(color: Colors.white),
+            ),
         elevation: 1,
         backgroundColor: Theme.of(context).colorScheme.onPrimary,
         leading: Builder(
@@ -134,6 +134,8 @@ class _HomePageState extends State<HomePage> {
           },
         ),
       ),
+    );
+      },
     );
   }
 }

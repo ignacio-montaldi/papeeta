@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:papeeta/services/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
 
 class CustomDrawer extends StatelessWidget {
   const CustomDrawer({super.key});
@@ -52,8 +53,8 @@ class CustomDrawer extends StatelessWidget {
               leading: Icon(Icons.logout),
               title: Text('Cerrar sesión'),
               onTap: () {
+                context.read<AuthBloc>().add(LogoutRequested());
                 Navigator.pushReplacementNamed(context, 'login');
-                AuthService.deleteToken();
               },
             ),
           ],

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:papeeta/helpers/helpers.dart';
-import 'package:provider/provider.dart';
-
-import 'package:papeeta/services/auth_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
 
 import 'package:papeeta/widgets/widgets.dart';
 
@@ -50,52 +49,59 @@ class _FormState extends State<_Form> {
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context);
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is Authenticated) {
+          Navigator.pushReplacementNamed(context, 'home');
+        } else if (state is AuthError) {
+          mostrarAlerta(
+            context,
+            "Ups!",
+            state.message,
+          );
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(top: 40),
+        padding: const EdgeInsets.symmetric(horizontal: 50),
+        child: Column(
+          children: [
+            CustomInput(
+              icon: Icons.mail_outline,
+              placeholder: 'Correo',
+              keyboardType: TextInputType.emailAddress,
+              textController: emailCtrl,
+            ),
+            const SizedBox(height: 20),
+            CustomInput(
+              icon: Icons.lock_outline,
+              placeholder: 'Contraseña',
+              textController: passwordCtrl,
+              isPassword: true,
+            ),
+            const SizedBox(height: 20),
+            BlocBuilder<AuthBloc, AuthState>(
+              builder: (context, state) {
+                final isAutenticando = state is AuthLoading;
 
-    return Container(
-      margin: const EdgeInsets.only(top: 40),
-      padding: const EdgeInsets.symmetric(horizontal: 50),
-      child: Column(
-        children: [
-          CustomInput(
-            icon: Icons.mail_outline,
-            placeholder: 'Correo',
-            keyboardType: TextInputType.emailAddress,
-            textController: emailCtrl,
-          ),
-          const SizedBox(height: 20),
-          CustomInput(
-            icon: Icons.lock_outline,
-            placeholder: 'Contraseña',
-            textController: passwordCtrl,
-            isPassword: true,
-          ),
-          const SizedBox(height: 20),
-          ButtonComponent(
-            text: "Ingrese",
-            onPressed: authService.autenticando
-                ? () => {}
-                : () async {
-                    FocusScope.of(context).unfocus();
-                    bool loginOk = await authService.login(
-                      emailCtrl.text.trim(),
-                      passwordCtrl.text.trim(),
-                    );
-
-                    if (!context.mounted) return;
-
-                    if (loginOk) {
-                      Navigator.pushReplacementNamed(context, 'home');
-                    } else {
-                      mostrarAlerta(
-                        context,
-                        "Login incorrecto",
-                        "Revise sus credenciales nuevamente",
-                      );
-                    }
-                  },
-          ),
-        ],
+                return ButtonComponent(
+                  text: "Ingrese",
+                  onPressed: isAutenticando
+                      ? () => {}
+                      : () {
+                          FocusScope.of(context).unfocus();
+                          context.read<AuthBloc>().add(
+                                LoginRequested(
+                                  emailCtrl.text.trim(),
+                                  passwordCtrl.text.trim(),
+                                ),
+                              );
+                        },
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

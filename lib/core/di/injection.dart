@@ -18,9 +18,19 @@ import 'package:papeeta/features/ingredients/domain/repositories/ingredient_repo
 import 'package:papeeta/features/ingredients/data/repositories/ingredient_repository_impl.dart';
 import 'package:papeeta/features/ingredients/presentation/bloc/ingredient_bloc.dart';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:papeeta/features/auth/data/datasources/auth_local_datasource.dart';
+import 'package:papeeta/features/auth/data/datasources/auth_local_datasource_impl.dart';
+import 'package:papeeta/features/auth/data/datasources/auth_remote_datasource.dart';
+import 'package:papeeta/features/auth/data/datasources/auth_remote_datasource_impl.dart';
+import 'package:papeeta/features/auth/domain/repositories/auth_repository.dart';
+import 'package:papeeta/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
+
 final getIt = GetIt.instance;
 
 void setupDependencies() {
+  _registerAuth();
   _registerDio();
   _registerRecipes();
   _registerCategories();
@@ -83,5 +93,30 @@ void _registerIngredients() {
 
   getIt.registerFactory<IngredientBloc>(
     () => IngredientBloc(repository: getIt<IngredientRepository>()),
+  );
+}
+
+void _registerAuth() {
+  getIt.registerLazySingleton<FlutterSecureStorage>(
+    () => const FlutterSecureStorage(),
+  );
+
+  getIt.registerLazySingleton<AuthLocalDataSource>(
+    () => AuthLocalDataSourceImpl(storage: getIt<FlutterSecureStorage>()),
+  );
+
+  getIt.registerLazySingleton<AuthRemoteDataSource>(
+    () => AuthRemoteDataSourceImpl(dio: getIt<Dio>()),
+  );
+
+  getIt.registerLazySingleton<AuthRepository>(
+    () => AuthRepositoryImpl(
+      remoteDataSource: getIt<AuthRemoteDataSource>(),
+      localDataSource: getIt<AuthLocalDataSource>(),
+    ),
+  );
+
+  getIt.registerFactory<AuthBloc>(
+    () => AuthBloc(repository: getIt<AuthRepository>()),
   );
 }

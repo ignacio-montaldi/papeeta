@@ -3,12 +3,10 @@ import 'package:papeeta/core/di/injection.dart';
 import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
 import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
 
-import 'package:provider/provider.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
+import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:papeeta/bloc/blocs.dart' as old_blocs;
 import 'package:papeeta/routes/routes.dart';
-import 'package:papeeta/services/services.dart';
 
 void main() {
   setupDependencies();
@@ -20,16 +18,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => AuthService())],
-      child: MultiBlocProvider(
-        providers: [
-          BlocProvider<old_blocs.IngredientBloc>(
-            create: (_) => getIt<old_blocs.IngredientBloc>(),
-          ),
-          BlocProvider<RecipeBloc>(create: (_) => getIt<RecipeBloc>()),
-          BlocProvider<CategoryBloc>(create: (_) => getIt<CategoryBloc>()),
-        ],
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<AuthBloc>(create: (_) => getIt<AuthBloc>()),
+        BlocProvider<old_blocs.IngredientBloc>(
+          create: (_) => getIt<old_blocs.IngredientBloc>(),
+        ),
+        BlocProvider<RecipeBloc>(create: (_) => getIt<RecipeBloc>()),
+        BlocProvider<CategoryBloc>(create: (_) => getIt<CategoryBloc>()),
+      ],
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Papeeta',
@@ -45,7 +42,6 @@ class MyApp extends StatelessWidget {
           ),
           routes: appRoutes,
         ),
-      ),
     );
   }
 }

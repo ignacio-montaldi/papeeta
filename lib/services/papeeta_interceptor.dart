@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:papeeta/services/services.dart';
+import 'package:papeeta/core/di/injection.dart';
+import 'package:papeeta/features/auth/data/datasources/auth_local_datasource.dart';
 
 class PapeetaInterceptor extends Interceptor {
   @override
@@ -7,7 +8,13 @@ class PapeetaInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    options.headers.addAll({'x-token': await AuthService.getToken()});
+    final localDataSource = getIt<AuthLocalDataSource>();
+    final token = await localDataSource.getToken();
+
+    if (token != null) {
+      options.headers.addAll({'x-token': token});
+    }
+
     super.onRequest(options, handler);
   }
 }
