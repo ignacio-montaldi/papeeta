@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:papeeta/core/domain/entities/category.dart';
 import 'package:papeeta/core/domain/entities/category_group.dart';
@@ -32,7 +33,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
         backgroundColor: Theme.of(context).colorScheme.onPrimary,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
         ),
       ),
       body: BlocBuilder<CategoryBloc, CategoryState>(
@@ -58,10 +59,12 @@ class _CategoriesPageState extends State<CategoriesPage> {
             final filteredCategories = _selectedGroupId == null
                 ? categories
                 : categories
-                    .where((c) =>
-                        c.groupId == _selectedGroupId ||
-                        c.group?.id == _selectedGroupId)
-                    .toList();
+                      .where(
+                        (c) =>
+                            c.groupId == _selectedGroupId ||
+                            c.group?.id == _selectedGroupId,
+                      )
+                      .toList();
 
             return ListView(
               padding: const EdgeInsets.only(top: 20),
@@ -80,16 +83,21 @@ class _CategoriesPageState extends State<CategoriesPage> {
                     categories: filteredCategories,
                     onCategoryTap: (category) {
                       context.read<RecipeBloc>().add(
-                            LoadRecipesByCategory(category.id),
-                          );
-                      Navigator.pushNamed(context, 'recipeList', arguments: category);
+                        LoadRecipesByCategory(category.id),
+                      );
+                      context.push(
+                        '/categories/${category.id}',
+                        extra: category,
+                      );
                     },
                   )
                 else
                   const Center(
                     child: Padding(
                       padding: EdgeInsets.all(24),
-                      child: Text('No se encontraron categorías para este grupo.'),
+                      child: Text(
+                        'No se encontraron categorías para este grupo.',
+                      ),
                     ),
                   ),
               ],
@@ -101,15 +109,10 @@ class _CategoriesPageState extends State<CategoriesPage> {
       ),
     );
   }
-
-
 }
 
 class _CategoryGrid extends StatelessWidget {
-  const _CategoryGrid({
-    required this.categories,
-    required this.onCategoryTap,
-  });
+  const _CategoryGrid({required this.categories, required this.onCategoryTap});
 
   final List<Category> categories;
   final void Function(Category category) onCategoryTap;
@@ -150,7 +153,8 @@ class _CategoryGrid extends StatelessWidget {
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 30),
-                  child: category.imageUrl != null && category.imageUrl!.isNotEmpty
+                  child:
+                      category.imageUrl != null && category.imageUrl!.isNotEmpty
                       ? MyImageWidget(
                           image: MyImageModel(url: category.imageUrl!),
                           height: 60,

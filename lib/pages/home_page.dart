@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:papeeta/core/domain/entities/category.dart';
@@ -56,7 +57,7 @@ class _HomePageState extends State<HomePage> {
           drawer: CustomDrawer(),
           floatingActionButton: FloatingActionButton(
             onPressed: () {
-              Navigator.pushNamed(context, 'addRecipe');
+              context.push('/addRecipe');
             },
             backgroundColor: Theme.of(context).colorScheme.onPrimary,
             child: Icon(Icons.post_add, color: Colors.white),
@@ -223,9 +224,9 @@ class _CategoryItem extends StatelessWidget {
                 LoadRecipesByCategory(category!.id),
               );
 
-              Navigator.pushNamed(context, 'recipeList', arguments: category);
+              context.push('/categories/${category!.id}', extra: category);
             } else {
-              Navigator.pushNamed(context, 'categories');
+              context.push('/categories');
             }
           },
           child: Container(

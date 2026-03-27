@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:papeeta/features/recipes/presentation/bloc/recipe_form/recipe_form_cubit.dart';
 import 'package:papeeta/core/domain/entities/category.dart';
@@ -75,7 +76,7 @@ class _CategorySelectorSheetState extends State<CategorySelectorSheet> {
             ),
             const SizedBox(height: 8),
             ElevatedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => context.pop(),
               child: const Text('Listo'),
             ),
           ],

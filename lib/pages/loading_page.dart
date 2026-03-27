@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:papeeta/pages/pages.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
 
@@ -23,21 +23,9 @@ class _LoadingPageState extends State<LoadingPage> {
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is Authenticated) {
-            Navigator.pushReplacement(
-              context,
-              PageRouteBuilder(
-                pageBuilder: (_, __, ___) => const HomePage(),
-                transitionDuration: const Duration(milliseconds: 0),
-              ),
-            );
+            context.go('/');
           } else if (state is Unauthenticated) {
-            Navigator.pushReplacement(
-              context,
-              PageRouteBuilder(
-                pageBuilder: (_, __, ___) => const LoginPage(),
-                transitionDuration: const Duration(milliseconds: 0),
-              ),
-            );
+            context.go('/login');
           }
         },
         child: const Center(child: Text('Espere...')),

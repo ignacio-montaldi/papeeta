@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,7 +11,6 @@ import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart
 import 'package:papeeta/features/recipes/domain/entities/ingredient.dart';
 import 'package:papeeta/features/recipes/domain/entities/ingredient_unit.dart';
 import 'package:papeeta/features/recipes/domain/entities/preparation_step.dart';
-import 'package:papeeta/pages/recipe_page.dart';
 import 'package:papeeta/widgets/category_selector_sheet.dart';
 
 class AddRecipePage extends StatefulWidget {
@@ -44,7 +44,7 @@ class _AddRecipePageState extends State<AddRecipePage> {
             const SnackBar(content: Text('Receta guardada correctamente')),
           );
 
-          Navigator.pop(context);
+          context.pop();
         }
 
         if (state.submitError != null) {
@@ -104,7 +104,8 @@ class _AddRecipePageState extends State<AddRecipePage> {
                                     builder: (context, state) {
                                       return _RecipeIngredients(
                                         ingredients: state.ingredients,
-                                        ingredientUiKeys: state.ingredientUiKeys,
+                                        ingredientUiKeys:
+                                            state.ingredientUiKeys,
                                         units: units,
                                       );
                                     },
@@ -150,7 +151,9 @@ class _AddRecipePageState extends State<AddRecipePage> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          if (state.errors.containsKey('images'))
+                                          if (state.errors.containsKey(
+                                            'images',
+                                          ))
                                             Padding(
                                               padding:
                                                   const EdgeInsets.symmetric(
@@ -233,16 +236,14 @@ class _AddRecipePageState extends State<AddRecipePage> {
                           final cubit = context.read<RecipeFormCubit>();
                           cubit.validateForm();
                           if (!cubit.state.isValid) return;
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => RecipePage(
-                                previewRecipe: cubit.buildRecipe(),
-                                previewImages: cubit.state.images
-                                    .map((img) => img.file)
-                                    .toList(),
-                              ),
-                            ),
+                          context.push(
+                            '/preview',
+                            extra: {
+                              'recipe': cubit.buildRecipe(),
+                              'images': cubit.state.images
+                                  .map((img) => img.file)
+                                  .toList(),
+                            },
                           );
                         },
                       ),
@@ -287,7 +288,7 @@ class _AddRecipePageState extends State<AddRecipePage> {
                 leading: const Icon(Icons.photo_camera_outlined),
                 title: const Text('Tomar foto'),
                 onTap: () {
-                  Navigator.pop(context);
+                  context.pop();
                   context.read<RecipeFormCubit>().pickImage(ImageSource.camera);
                 },
               ),
@@ -295,7 +296,7 @@ class _AddRecipePageState extends State<AddRecipePage> {
                 leading: const Icon(Icons.photo_library_outlined),
                 title: const Text('Elegir de la galería'),
                 onTap: () {
-                  Navigator.pop(context);
+                  context.pop();
                   context.read<RecipeFormCubit>().pickImage(
                     ImageSource.gallery,
                   );
@@ -500,8 +501,9 @@ class _IngredientCard extends StatelessWidget {
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete_outline),
-                      onPressed: () =>
-                          context.read<RecipeFormCubit>().removeIngredient(index),
+                      onPressed: () => context
+                          .read<RecipeFormCubit>()
+                          .removeIngredient(index),
                     ),
                   ],
                 ),
@@ -517,19 +519,14 @@ class _IngredientCard extends StatelessWidget {
                     border: const OutlineInputBorder(),
                     errorText: state.errors['ingredient_amount_$index'],
                   ),
-                  onChanged: (v) => cubit.updateIngredient(
-                    index,
-                    amount: double.tryParse(v),
-                  ),
+                  onChanged: (v) =>
+                      cubit.updateIngredient(index, amount: double.tryParse(v)),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<IngredientUnit>(
                   initialValue: ingredient.unit,
                   items: units.map((u) {
-                    return DropdownMenuItem(
-                      value: u,
-                      child: Text(u.name),
-                    );
+                    return DropdownMenuItem(value: u, child: Text(u.name));
                   }).toList(),
                   decoration: InputDecoration(
                     labelText: 'Unidad',
@@ -630,8 +627,9 @@ class _RecipeSteps extends StatelessWidget {
                               ),
                               IconButton(
                                 icon: const Icon(Icons.delete_outline),
-                                onPressed: () =>
-                                    context.read<RecipeFormCubit>().removeStep(index),
+                                onPressed: () => context
+                                    .read<RecipeFormCubit>()
+                                    .removeStep(index),
                               ),
                             ],
                           ),
@@ -741,7 +739,9 @@ class _RecipeCategoriesField extends StatelessWidget {
               spacing: 8,
               runSpacing: 4,
               children: state.categories.map((category) {
-                final selected = state.categories.any((c) => c.id == category.id);
+                final selected = state.categories.any(
+                  (c) => c.id == category.id,
+                );
                 return IgnorePointer(
                   child: FilterChip(
                     label: Text(category.name),
@@ -825,14 +825,14 @@ Future<bool> _showExitDialog(BuildContext context) async {
             content: const Text('Si salís ahora, se perderán los cambios.'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context, false),
+                onPressed: () => Navigator.of(context).pop(false),
                 child: const Text(
                   'Seguir editando',
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
               FilledButton(
-                onPressed: () => Navigator.pop(context, true),
+                onPressed: () => Navigator.of(context).pop(true),
                 child: const Text(
                   'Salir',
                   style: TextStyle(

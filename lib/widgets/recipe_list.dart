@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:papeeta/features/recipes/domain/entities/recipe.dart';
 import 'package:papeeta/models/my_image_model.dart';
 import 'package:papeeta/widgets/widgets.dart';
@@ -23,7 +24,7 @@ class RecipeList extends StatelessWidget {
               : '';
           return GestureDetector(
             onTap: () {
-              Navigator.pushNamed(context, 'recipe', arguments: recipe.id);
+              context.push('/recipe/${recipe.id}');
             },
             child: Padding(
               padding: const EdgeInsets.only(bottom: 15),

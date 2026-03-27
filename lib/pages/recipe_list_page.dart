@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:papeeta/core/domain/entities/category.dart';
 import 'package:papeeta/features/recipes/domain/entities/recipe.dart';
@@ -25,9 +26,7 @@ class _RecipeListPageState extends State<RecipeListPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<RecipeBloc>().add(
-            LoadRecipesByCategory(widget.category.id),
-          );
+      context.read<RecipeBloc>().add(LoadRecipesByCategory(widget.category.id));
     });
   }
 
@@ -45,7 +44,7 @@ class _RecipeListPageState extends State<RecipeListPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
             context.read<RecipeBloc>().add(const RestoreHomeRecipes());
-            Navigator.pop(context);
+            context.pop();
           },
         ),
         automaticallyImplyLeading: false,
@@ -59,9 +58,7 @@ class _RecipeListPageState extends State<RecipeListPage> {
           if (state is RecipeListLoaded) {
             if (state.recipes.isEmpty) {
               return const Center(
-                child: Text(
-                  'No se encontraron recetas para esta categoría.',
-                ),
+                child: Text('No se encontraron recetas para esta categoría.'),
               );
             }
 

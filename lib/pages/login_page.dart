@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:papeeta/helpers/helpers.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
@@ -52,13 +53,9 @@ class _FormState extends State<_Form> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is Authenticated) {
-          Navigator.pushReplacementNamed(context, 'home');
+          context.go('/');
         } else if (state is AuthError) {
-          mostrarAlerta(
-            context,
-            "Ups!",
-            state.message,
-          );
+          mostrarAlerta(context, "Ups!", state.message);
         }
       },
       child: Container(
@@ -91,11 +88,11 @@ class _FormState extends State<_Form> {
                       : () {
                           FocusScope.of(context).unfocus();
                           context.read<AuthBloc>().add(
-                                LoginRequested(
-                                  emailCtrl.text.trim(),
-                                  passwordCtrl.text.trim(),
-                                ),
-                              );
+                            LoginRequested(
+                              emailCtrl.text.trim(),
+                              passwordCtrl.text.trim(),
+                            ),
+                          );
                         },
                 );
               },
