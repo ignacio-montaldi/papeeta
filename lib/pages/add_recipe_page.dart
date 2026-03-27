@@ -1,13 +1,16 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
-import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
-import 'package:papeeta/bloc/blocs.dart';
-import 'package:papeeta/models/models.dart';
-import 'package:papeeta/services/auth_service.dart';
+import 'package:papeeta/features/ingredients/presentation/bloc/ingredient_bloc.dart';
+import 'package:papeeta/features/recipes/presentation/bloc/recipe_form/recipe_form_cubit.dart';
+import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
+import 'package:papeeta/features/recipes/domain/entities/ingredient.dart';
+import 'package:papeeta/features/recipes/domain/entities/ingredient_unit.dart';
+import 'package:papeeta/features/recipes/domain/entities/preparation_step.dart';
 import 'package:papeeta/widgets/category_selector_sheet.dart';
 
 class AddRecipePage extends StatefulWidget {
@@ -20,19 +23,12 @@ class AddRecipePage extends StatefulWidget {
 class _AddRecipePageState extends State<AddRecipePage> {
   final _formKey = GlobalKey<FormState>();
 
-  // 🔥 NUEVO: medidas cargadas desde tu API
-  List<IngredientUnitModel> units = [];
-
-  // Categorías cargadas desde API
-  List<CategoryModel> categories = [];
-
-  // IDs seleccionados
-  List<int> selectedCategoryIds = [];
+  List<IngredientUnit> units = [];
 
   @override
   void initState() {
-    BlocProvider.of<IngredientBloc>(context).add(LoadUnitsEvent());
-    context.read<CategoryBloc>().getCategoriesList();
+    context.read<IngredientBloc>().add(LoadUnitsEvent());
+    context.read<CategoryBloc>().add(const LoadCategories());
     super.initState();
   }
 
@@ -48,7 +44,7 @@ class _AddRecipePageState extends State<AddRecipePage> {
             const SnackBar(content: Text('Receta guardada correctamente')),
           );
 
-          Navigator.pop(context); // volver
+          context.pop();
         }
 
         if (state.submitError != null) {
@@ -83,11 +79,12 @@ class _AddRecipePageState extends State<AddRecipePage> {
                     child: BlocBuilder<IngredientBloc, IngredientState>(
                       builder: (context, state) {
                         if (state is IngredientLoading) {
-                          return Center(
-                            child: const CircularProgressIndicator(),
+                          return const Center(
+                            child: CircularProgressIndicator(),
                           );
                         } else if (state is IngredientUnitsLoaded) {
                           units = state.units;
+
                           return Form(
                             key: _formKey,
                             child: SingleChildScrollView(
@@ -95,23 +92,20 @@ class _AddRecipePageState extends State<AddRecipePage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // 🧁 Nombre de la receta
-                                  _RecipeName(),
+                                  const _RecipeName(),
                                   const SizedBox(height: 20),
-                                  // 📜 Subtítulo
-                                  _RecipeSubtitle(),
+                                  const _RecipeSubtitle(),
                                   const SizedBox(height: 20),
-                                  // ⛓️‍💥 Fuente de la receta original
-                                  _RecipeSourceLink(),
+                                  const _RecipeSourceLink(),
                                   const SizedBox(height: 20),
-                                  //Categorias
-                                  _RecipeCategoriesField(),
+                                  const _RecipeCategoriesField(),
                                   const SizedBox(height: 20),
-                                  // 🧂 Ingredientes
                                   BlocBuilder<RecipeFormCubit, RecipeFormState>(
                                     builder: (context, state) {
                                       return _RecipeIngredients(
                                         ingredients: state.ingredients,
+                                        ingredientUiKeys:
+                                            state.ingredientUiKeys,
                                         units: units,
                                       );
                                     },
@@ -119,13 +113,13 @@ class _AddRecipePageState extends State<AddRecipePage> {
                                   const SizedBox(height: 20),
                                   BlocBuilder<RecipeFormCubit, RecipeFormState>(
                                     builder: (context, state) {
-                                      return _RecipeSteps(steps: state.steps);
+                                      return _RecipeSteps(
+                                        steps: state.steps,
+                                        stepUiKeys: state.stepUiKeys,
+                                      );
                                     },
                                   ),
-                                  // 🔪 Pasos
                                   const SizedBox(height: 20),
-
-                                  // Carrusel de imágenes
                                   BlocBuilder<RecipeFormCubit, RecipeFormState>(
                                     builder: (context, state) {
                                       if (state.images.isEmpty) {
@@ -141,9 +135,7 @@ class _AddRecipePageState extends State<AddRecipePage> {
                                               const SizedBox(width: 12),
                                           itemBuilder: (context, index) {
                                             return _ImageThumbnail(
-                                              image: state.images
-                                                  .map((image) => image.file!)
-                                                  .toList()[index],
+                                              image: state.images[index].file,
                                               onRemove: () => context
                                                   .read<RecipeFormCubit>()
                                                   .removeImage(index),
@@ -153,8 +145,6 @@ class _AddRecipePageState extends State<AddRecipePage> {
                                       );
                                     },
                                   ),
-
-                                  // 📸 Imagen
                                   BlocBuilder<RecipeFormCubit, RecipeFormState>(
                                     builder: (context, state) {
                                       return Column(
@@ -211,9 +201,9 @@ class _AddRecipePageState extends State<AddRecipePage> {
                             ),
                           );
                         } else if (state is IngredientError) {
-                          return Text("Error: ${state.message}");
+                          return Text('Error: ${state.message}');
                         }
-                        return Text("Error inesperado");
+                        return const Text('Error inesperado');
                       },
                     ),
                   ),
@@ -231,7 +221,7 @@ class _AddRecipePageState extends State<AddRecipePage> {
                           context,
                         ).colorScheme.onPrimary,
                         foregroundColor: Colors.white,
-                        shape: CircleBorder(),
+                        shape: const CircleBorder(),
                         onTap: () => context.read<RecipeFormCubit>().submit(),
                       ),
                       SpeedDialChild(
@@ -241,27 +231,19 @@ class _AddRecipePageState extends State<AddRecipePage> {
                           context,
                         ).colorScheme.onPrimary,
                         foregroundColor: Colors.white,
-                        shape: CircleBorder(),
+                        shape: const CircleBorder(),
                         onTap: () {
                           final cubit = context.read<RecipeFormCubit>();
                           cubit.validateForm();
-
                           if (!cubit.state.isValid) return;
-
-                          final authService = context.read<AuthService>();
-                          context.read<RecipeFormCubit>().setAuthor(
-                            authService.usuario,
-                          );
-
-                          final recipe = context
-                              .read<RecipeFormCubit>()
-                              .buildPreviewRecipe();
-
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => RecipePage(previewRecipe: recipe),
-                            ),
+                          context.push(
+                            '/preview',
+                            extra: {
+                              'recipe': cubit.buildRecipe(),
+                              'images': cubit.state.images
+                                  .map((img) => img.file)
+                                  .toList(),
+                            },
                           );
                         },
                       ),
@@ -269,8 +251,6 @@ class _AddRecipePageState extends State<AddRecipePage> {
                   ),
                 ),
               ),
-
-              // OVERLAY DE LOADING
               if (formState.isSubmitting)
                 Container(
                   color: Colors.black.withAlpha(90),
@@ -281,11 +261,6 @@ class _AddRecipePageState extends State<AddRecipePage> {
         },
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 
   void _showImageSourceSheet(BuildContext context) {
@@ -300,8 +275,6 @@ class _AddRecipePageState extends State<AddRecipePage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 12),
-
-              // Handle visual
               Container(
                 width: 40,
                 height: 4,
@@ -310,29 +283,25 @@ class _AddRecipePageState extends State<AddRecipePage> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-
               const SizedBox(height: 20),
-
               ListTile(
                 leading: const Icon(Icons.photo_camera_outlined),
                 title: const Text('Tomar foto'),
                 onTap: () {
-                  Navigator.pop(context);
+                  context.pop();
                   context.read<RecipeFormCubit>().pickImage(ImageSource.camera);
                 },
               ),
-
               ListTile(
                 leading: const Icon(Icons.photo_library_outlined),
                 title: const Text('Elegir de la galería'),
                 onTap: () {
-                  Navigator.pop(context);
+                  context.pop();
                   context.read<RecipeFormCubit>().pickImage(
                     ImageSource.gallery,
                   );
                 },
               ),
-
               const SizedBox(height: 12),
             ],
           ),
@@ -352,8 +321,8 @@ class _RecipeName extends StatelessWidget {
         return TextFormField(
           decoration: InputDecoration(
             labelText: 'Nombre de la receta',
-            prefixIcon: Icon(Icons.fastfood_outlined),
-            border: OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.fastfood_outlined),
+            border: const OutlineInputBorder(),
             errorText: state.errors['title'],
           ),
           onChanged: (value) => context.read<RecipeFormCubit>().setTitle(value),
@@ -394,9 +363,8 @@ class _RecipeSourceLink extends StatelessWidget {
           decoration: InputDecoration(
             labelText: 'Fuente',
             hintText: 'https://www.ejemplo.com',
-            hintStyle: TextStyle(),
-            prefixIcon: Icon(Icons.link),
-            border: OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.link),
+            border: const OutlineInputBorder(),
             errorText: state.errors['link'],
           ),
           onChanged: (value) =>
@@ -407,20 +375,16 @@ class _RecipeSourceLink extends StatelessWidget {
   }
 }
 
-class _RecipeIngredients extends StatefulWidget {
-  final List<IngredientModel> ingredients;
-  final List<IngredientUnitModel> units;
-  const _RecipeIngredients({required this.ingredients, required this.units});
+class _RecipeIngredients extends StatelessWidget {
+  final List<Ingredient> ingredients;
+  final List<int> ingredientUiKeys;
+  final List<IngredientUnit> units;
 
-  @override
-  State<_RecipeIngredients> createState() => _RecipeIngredientsState();
-}
-
-class _RecipeIngredientsState extends State<_RecipeIngredients> {
-  @override
-  void initState() {
-    super.initState();
-  }
+  const _RecipeIngredients({
+    required this.ingredients,
+    required this.ingredientUiKeys,
+    required this.units,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -439,7 +403,7 @@ class _RecipeIngredientsState extends State<_RecipeIngredients> {
                 ),
               ),
             Text(
-              "Ingredientes",
+              'Ingredientes',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -447,7 +411,6 @@ class _RecipeIngredientsState extends State<_RecipeIngredients> {
               ),
             ),
             const SizedBox(height: 12),
-
             ReorderableListView(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -458,22 +421,20 @@ class _RecipeIngredientsState extends State<_RecipeIngredients> {
                 );
               },
               children: [
-                for (int index = 0; index < widget.ingredients.length; index++)
+                for (int index = 0; index < ingredients.length; index++)
                   _IngredientCard(
-                    key: ValueKey(widget.ingredients[index].tempId),
+                    key: ValueKey(ingredientUiKeys[index]),
                     index: index,
-                    ingredient: widget.ingredients[index],
-                    units: widget.units,
+                    ingredient: ingredients[index],
+                    units: units,
                     cubit: cubit,
                   ),
               ],
             ),
-
-            // Botón agregar ingrediente
             OutlinedButton.icon(
               onPressed: () => context.read<RecipeFormCubit>().addIngredient(),
               icon: const Icon(Icons.add),
-              label: const Text("Agregar ingrediente"),
+              label: const Text('Agregar ingrediente'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 side: BorderSide(
@@ -494,8 +455,8 @@ class _RecipeIngredientsState extends State<_RecipeIngredients> {
 
 class _IngredientCard extends StatelessWidget {
   final int index;
-  final IngredientModel ingredient;
-  final List<IngredientUnitModel> units;
+  final Ingredient ingredient;
+  final List<IngredientUnit> units;
   final RecipeFormCubit cubit;
 
   const _IngredientCard({
@@ -524,7 +485,6 @@ class _IngredientCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Número de paso
                     Row(
                       children: [
                         const Icon(Icons.drag_handle, color: Colors.grey),
@@ -535,11 +495,10 @@ class _IngredientCard extends StatelessWidget {
                             context,
                           ).colorScheme.onPrimary,
                           foregroundColor: Colors.white,
-                          child: Text("${index + 1}"),
+                          child: Text('${index + 1}'),
                         ),
                       ],
                     ),
-                    // Botón eliminar
                     IconButton(
                       icon: const Icon(Icons.delete_outline),
                       onPressed: () => context
@@ -549,52 +508,42 @@ class _IngredientCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 10),
-
-                // Cantidad
                 TextFormField(
-                  initialValue: ingredient.amount?.toString() ?? "",
+                  initialValue: ingredient.amount?.toString() ?? '',
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
                   decoration: InputDecoration(
-                    labelText: "Cantidad",
-                    prefixIcon: Icon(Icons.numbers),
-                    border: OutlineInputBorder(),
+                    labelText: 'Cantidad',
+                    prefixIcon: const Icon(Icons.numbers),
+                    border: const OutlineInputBorder(),
                     errorText: state.errors['ingredient_amount_$index'],
                   ),
                   onChanged: (v) =>
                       cubit.updateIngredient(index, amount: double.tryParse(v)),
                 ),
                 const SizedBox(height: 12),
-
-                // Unidad (dropdown)
-                DropdownButtonFormField<IngredientUnitModel>(
-                  value: ingredient.measure,
+                DropdownButtonFormField<IngredientUnit>(
+                  initialValue: ingredient.unit,
                   items: units.map((u) {
-                    return DropdownMenuItem(
-                      value: u,
-                      child: Text(u.displayName),
-                    );
+                    return DropdownMenuItem(value: u, child: Text(u.name));
                   }).toList(),
                   decoration: InputDecoration(
-                    labelText: "Unidad",
-                    prefixIcon: Icon(Icons.straighten),
-                    border: OutlineInputBorder(),
+                    labelText: 'Unidad',
+                    prefixIcon: const Icon(Icons.straighten),
+                    border: const OutlineInputBorder(),
                     errorText: state.errors['ingredient_unit_$index'],
                   ),
-                  onChanged: (u) => cubit.updateIngredient(index, measure: u),
+                  onChanged: (u) => cubit.updateIngredient(index, unit: u),
                 ),
                 const SizedBox(height: 12),
-
-                // Nombre del ingrediente
                 TextFormField(
                   initialValue: ingredient.name,
-                  decoration: InputDecoration(
-                    labelText: "Nombre del ingrediente",
-                    hint: Text('En singular. Ej: Huevo'),
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre del ingrediente',
+                    hintText: 'En singular. Ej: Huevo',
                     prefixIcon: Icon(Icons.rice_bowl_outlined),
                     border: OutlineInputBorder(),
-                    errorText: state.errors['ingredient_$index'],
                   ),
                   onChanged: (v) => cubit.updateIngredient(index, name: v),
                 ),
@@ -607,19 +556,11 @@ class _IngredientCard extends StatelessWidget {
   }
 }
 
-class _RecipeSteps extends StatefulWidget {
-  final List<PreparationStepModel> steps;
-  const _RecipeSteps({required this.steps});
+class _RecipeSteps extends StatelessWidget {
+  final List<PreparationStep> steps;
+  final List<int> stepUiKeys;
 
-  @override
-  State<_RecipeSteps> createState() => __RecipeStepsState();
-}
-
-class __RecipeStepsState extends State<_RecipeSteps> {
-  @override
-  void initState() {
-    super.initState();
-  }
+  const _RecipeSteps({required this.steps, required this.stepUiKeys});
 
   @override
   Widget build(BuildContext context) {
@@ -634,17 +575,14 @@ class __RecipeStepsState extends State<_RecipeSteps> {
                 style: const TextStyle(color: Colors.red),
               ),
             Text(
-              "Pasos de preparación",
+              'Pasos de preparación',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.onSecondary,
               ),
             ),
-
             const SizedBox(height: 12),
-
-            // Lista de pasos
             ReorderableListView(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -654,85 +592,78 @@ class __RecipeStepsState extends State<_RecipeSteps> {
                   newIndex,
                 );
               },
-              children: widget.steps.map((step) {
-                return Card(
-                  key: ValueKey(step.tempId),
-                  elevation: 1,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            // Número de paso
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.drag_handle,
-                                  color: Colors.grey,
-                                ),
-                                const SizedBox(width: 8),
-                                CircleAvatar(
-                                  radius: 18,
-                                  backgroundColor: Theme.of(
-                                    context,
-                                  ).colorScheme.onPrimary,
-                                  foregroundColor: Colors.white,
-                                  child: Text("${step.stepNumber}"),
-                                ),
-                              ],
-                            ),
-                            // Botón eliminar
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline),
-                              onPressed: () => context
-                                  .read<RecipeFormCubit>()
-                                  .removeStepById(step.tempId!),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            // TextField de descripción
-                            Expanded(
-                              child: TextFormField(
-                                initialValue: step.description,
-                                maxLines: null,
-                                decoration: InputDecoration(
-                                  labelText: "Descripción del paso",
-                                  border: OutlineInputBorder(),
-                                  errorText: state
-                                      .errors['step_${step.stepNumber - 1}'],
-                                ),
-                                onChanged: (v) => context
-                                    .read<RecipeFormCubit>()
-                                    .updateStepById(step.tempId!, v),
+              children: [
+                for (int index = 0; index < steps.length; index++)
+                  Card(
+                    key: ValueKey(stepUiKeys[index]),
+                    elevation: 1,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.drag_handle,
+                                    color: Colors.grey,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  CircleAvatar(
+                                    radius: 18,
+                                    backgroundColor: Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimary,
+                                    foregroundColor: Colors.white,
+                                    child: Text('${steps[index].order}'),
+                                  ),
+                                ],
                               ),
-                            ),
-
-                            const SizedBox(width: 8),
-                          ],
-                        ),
-                      ],
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                onPressed: () => context
+                                    .read<RecipeFormCubit>()
+                                    .removeStep(index),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  initialValue: steps[index].description,
+                                  maxLines: null,
+                                  decoration: InputDecoration(
+                                    labelText: 'Descripción del paso',
+                                    border: const OutlineInputBorder(),
+                                    errorText: state.errors['step_$index'],
+                                  ),
+                                  onChanged: (v) => context
+                                      .read<RecipeFormCubit>()
+                                      .updateStep(index, v),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                );
-              }).toList(),
+              ],
             ),
-
-            // Botón agregar ingrediente
             OutlinedButton.icon(
               onPressed: () => context.read<RecipeFormCubit>().addStep(),
               icon: const Icon(Icons.add),
-              label: const Text("Agregar paso de preparación"),
-
+              label: const Text('Agregar paso de preparación'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 side: BorderSide(
@@ -765,14 +696,13 @@ class _ImageThumbnail extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           child: Image.file(image, width: 96, height: 96, fit: BoxFit.cover),
         ),
-
         Positioned(
           top: 4,
           right: 4,
           child: GestureDetector(
             onTap: onRemove,
             child: Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: Colors.black54,
                 shape: BoxShape.circle,
               ),
@@ -805,7 +735,6 @@ class _RecipeCategoriesField extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-
             Wrap(
               spacing: 8,
               runSpacing: 4,
@@ -813,7 +742,6 @@ class _RecipeCategoriesField extends StatelessWidget {
                 final selected = state.categories.any(
                   (c) => c.id == category.id,
                 );
-
                 return IgnorePointer(
                   child: FilterChip(
                     label: Text(category.name),
@@ -823,9 +751,7 @@ class _RecipeCategoriesField extends StatelessWidget {
                 );
               }).toList(),
             ),
-
             const SizedBox(height: 8),
-
             OutlinedButton(
               onPressed: () => _openCategorySelector(context),
               style: OutlinedButton.styleFrom(
@@ -846,7 +772,7 @@ class _RecipeCategoriesField extends StatelessWidget {
                       children: [
                         const Icon(Icons.category_outlined),
                         const SizedBox(width: 8),
-                        Text(
+                        const Text(
                           'Seleccionar categorías',
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -857,7 +783,6 @@ class _RecipeCategoriesField extends StatelessWidget {
                 ],
               ),
             ),
-
             if (state.errors.containsKey('categories'))
               Padding(
                 padding: const EdgeInsets.only(top: 8),
@@ -900,14 +825,14 @@ Future<bool> _showExitDialog(BuildContext context) async {
             content: const Text('Si salís ahora, se perderán los cambios.'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context, false),
+                onPressed: () => Navigator.of(context).pop(false),
                 child: const Text(
                   'Seguir editando',
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
               FilledButton(
-                onPressed: () => Navigator.pop(context, true),
+                onPressed: () => Navigator.of(context).pop(true),
                 child: const Text(
                   'Salir',
                   style: TextStyle(

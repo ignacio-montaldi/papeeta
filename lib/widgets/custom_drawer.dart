@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:papeeta/services/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
 
 class CustomDrawer extends StatelessWidget {
   const CustomDrawer({super.key});
@@ -32,15 +34,15 @@ class CustomDrawer extends StatelessWidget {
                   ListTile(
                     title: const Text('Home'),
                     onTap: () {
-                      Navigator.pop(context); //Cierra primero el drawer
-                      Navigator.pushReplacementNamed(context, 'home');
+                      context.pop();
+                      context.go('/');
                     },
                   ),
                   ListTile(
                     title: const Text('Categorías'),
                     onTap: () {
-                      Navigator.pop(context); //Cierra primero el drawer
-                      Navigator.pushNamed(context, 'categories');
+                      context.pop();
+                      context.push('/categories');
                     },
                   ),
                 ],
@@ -52,8 +54,7 @@ class CustomDrawer extends StatelessWidget {
               leading: Icon(Icons.logout),
               title: Text('Cerrar sesión'),
               onTap: () {
-                Navigator.pushReplacementNamed(context, 'login');
-                AuthService.deleteToken();
+                context.read<AuthBloc>().add(LogoutRequested());
               },
             ),
           ],

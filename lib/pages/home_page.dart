@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:papeeta/models/models.dart';
-import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:papeeta/core/domain/entities/category.dart';
+import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
+import 'package:papeeta/features/recipes/domain/entities/recipe.dart';
+import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 
-import 'package:papeeta/bloc/blocs.dart';
-import 'package:papeeta/services/auth_service.dart';
+import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:papeeta/widgets/widgets.dart';
 
 class HomePage extends StatefulWidget {
@@ -21,124 +24,134 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    final recipeBloc = context.read<RecipeBloc>();
-    final categoryBloc = context.read<CategoryBloc>();
-
-    if (recipeBloc.state.recipes == null || recipeBloc.state.recipes!.isEmpty) {
-      recipeBloc.add(LoadHomeRecipes());
-    }
-
-    if (categoryBloc.state.categories == null ||
-        categoryBloc.state.categories!.isEmpty) {
-      categoryBloc.add(LoadHomeCategoriesList());
-    }
+    context.read<RecipeBloc>().add(const LoadHomeRecipes());
+    context.read<CategoryBloc>().add(LoadCategories());
   }
 
   void _onRefresh() {
-    context.read<RecipeBloc>().add(LoadHomeRecipes());
-    context.read<CategoryBloc>().add(LoadHomeCategoriesList());
+    context.read<RecipeBloc>().add(const LoadHomeRecipes());
+    context.read<CategoryBloc>().add(LoadCategories());
   }
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context);
-    final usuario = authService.usuario;
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        final userName = authState is Authenticated
+            ? authState.user.name
+            : 'Papeeta';
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          usuario.nombre,
-          style: const TextStyle(color: Colors.white),
-        ),
-        elevation: 1,
-        backgroundColor: Theme.of(context).colorScheme.onPrimary,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, color: Colors.white),
-            onPressed: () => Scaffold.of(context).openDrawer(),
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(userName, style: const TextStyle(color: Colors.white)),
+            elevation: 1,
+            backgroundColor: Theme.of(context).colorScheme.onPrimary,
+            leading: Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu, color: Colors.white),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+            ),
+            automaticallyImplyLeading: false,
           ),
-        ),
-        automaticallyImplyLeading: false,
-      ),
-      drawer: CustomDrawer(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.pushNamed(context, 'addRecipe');
-        },
-        backgroundColor: Theme.of(context).colorScheme.onPrimary,
-        child: Icon(Icons.post_add, color: Colors.white),
-      ),
-      body: MultiBlocListener(
-        listeners: [
-          BlocListener<RecipeBloc, RecipeState>(
-            listener: (context, state) {
-              if (state.recipes != null) {
-                _refreshController.refreshCompleted();
+          drawer: CustomDrawer(),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              context.push('/addRecipe');
+            },
+            backgroundColor: Theme.of(context).colorScheme.onPrimary,
+            child: Icon(Icons.post_add, color: Colors.white),
+          ),
+          body: BlocListener<RecipeBloc, RecipeState>(
+            listener: (context, recipeState) {
+              switch (recipeState) {
+                case RecipeListLoaded():
+                  _refreshController.refreshCompleted();
+                case RecipeError():
+                  _refreshController.refreshFailed();
+                default:
+                  break;
               }
             },
-          ),
-          BlocListener<CategoryBloc, CategoryState>(
-            listener: (context, state) {
-              if (state.categories != null) {
-                _refreshController.refreshCompleted();
-              }
-            },
-          ),
-        ],
-        child: BlocBuilder<RecipeBloc, RecipeState>(
-          builder: (context, recipeState) {
-            return BlocBuilder<CategoryBloc, CategoryState>(
+            child: BlocBuilder<CategoryBloc, CategoryState>(
               builder: (context, categoryState) {
-                final recipes = recipeState.recipes;
-                final categories = categoryState.categories;
+                return BlocBuilder<RecipeBloc, RecipeState>(
+                  builder: (context, recipeState) {
+                    if (categoryState is CategoryLoading ||
+                        categoryState is CategoryInitial ||
+                        recipeState is RecipeInitial ||
+                        recipeState is RecipeListLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                if (recipes == null || categories == null) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+                    if (categoryState is CategoryError) {
+                      return Center(child: Text(categoryState.message));
+                    }
 
-                if (recipes.isEmpty && categories.isEmpty) {
-                  return const Center(
-                    child: Text('No se encontraron recetas ni categorías.'),
-                  );
-                }
+                    if (recipeState is RecipeError) {
+                      return Center(child: Text(recipeState.message));
+                    }
 
-                return SmartRefresher(
-                  controller: _refreshController,
-                  enablePullDown: true,
-                  onRefresh: _onRefresh,
-                  physics: const BouncingScrollPhysics(),
-                  child: ListView(
-                    padding: const EdgeInsets.only(top: 20),
-                    children: [
-                      if (categories.isNotEmpty)
-                        _CategoriesList(categories: categories),
-                      const SizedBox(height: 20),
-                      if (recipes.isNotEmpty)
-                        RecipeList(recipes: recipes)
-                      else
-                        const Center(child: Text('No se encontraron recetas.')),
-                    ],
-                  ),
+                    if (categoryState is CategoryLoaded) {
+                      final categories = categoryState.categories;
+                      final recipes = switch (recipeState) {
+                        RecipeListLoaded(:final recipes) => recipes,
+                        RecipeDetailLoaded(:final recipes) => recipes,
+                        _ => <Recipe>[],
+                      };
+
+                      if (categories.isEmpty && recipes.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            'No se encontraron recetas ni categorías',
+                          ),
+                        );
+                      }
+
+                      return SmartRefresher(
+                        controller: _refreshController,
+                        enablePullDown: true,
+                        onRefresh: _onRefresh,
+                        physics: const BouncingScrollPhysics(),
+                        child: ListView(
+                          padding: const EdgeInsets.only(top: 20),
+                          children: [
+                            if (categories.isNotEmpty)
+                              _CategoriesList(categories: categories),
+                            const SizedBox(height: 20),
+                            if (recipes.isNotEmpty)
+                              RecipeList(recipes: recipes)
+                            else
+                              const Center(
+                                child: Text('No se encontraron recetas.'),
+                              ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return const SizedBox.shrink();
+                  },
                 );
               },
-            );
-          },
-        ),
-      ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
 class _CategoriesList extends StatefulWidget {
   const _CategoriesList({required this.categories});
-  final List<CategoryModel> categories;
+  final List<Category> categories;
 
   @override
   State<_CategoriesList> createState() => _CategoriesListState();
 }
 
 class _CategoriesListState extends State<_CategoriesList> {
-  late List<CategoryModel> limitedCategories;
+  late List<Category> limitedCategories;
 
   @override
   void initState() {
@@ -195,23 +208,25 @@ class _CategoryItem extends StatelessWidget {
     this.category,
   });
 
-  final CategoryModel? category;
+  final Category? category;
   final String label;
   final String? imageUrl;
   final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
-    final categoryBloc = context.read<CategoryBloc>();
     return Column(
       children: [
         GestureDetector(
           onTap: () {
-            if (imageUrl != null) {
-              categoryBloc.add(SelectedCategory(category: category!));
-              Navigator.pushNamed(context, 'recipeList');
+            if (category != null) {
+              context.read<RecipeBloc>().add(
+                LoadRecipesByCategory(category!.id),
+              );
+
+              context.push('/categories/${category!.id}', extra: category);
             } else {
-              Navigator.pushNamed(context, 'categories');
+              context.push('/categories');
             }
           },
           child: Container(
@@ -229,11 +244,21 @@ class _CategoryItem extends StatelessWidget {
             child: CircleAvatar(
               radius: 35,
               backgroundColor: Colors.white,
-              child: imageUrl != null
-                  ? MyImageWidget(
-                      image: MyImageModel(url: imageUrl!),
-                      width: 45,
-                      height: 45,
+              child: imageUrl != null && imageUrl!.isNotEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: CachedNetworkImage(
+                        imageUrl: imageUrl!,
+                        fit: BoxFit.cover,
+                        width: 70,
+                        height: 70,
+                        placeholder: (context, url) => const Padding(
+                          padding: EdgeInsets.all(12.0),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        errorWidget: (context, url, error) =>
+                            const Icon(Icons.broken_image, color: Colors.grey),
+                      ),
                     )
                   : Icon(icon, color: Colors.black54, size: 30),
             ),

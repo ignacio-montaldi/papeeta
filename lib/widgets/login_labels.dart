@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class LoginLabels extends StatelessWidget {
   final String ruta;
@@ -27,7 +28,8 @@ class LoginLabels extends StatelessWidget {
         const SizedBox(height: 10),
         GestureDetector(
           onTap: () {
-            Navigator.pushReplacementNamed(context, ruta);
+            final path = ruta == 'login' ? '/login' : '/register';
+            context.go(path);
           },
           child: Text(
             subtitulo, //'Crea una ahora!',

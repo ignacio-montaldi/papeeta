@@ -1,56 +1,44 @@
 import 'package:flutter/material.dart';
-import 'package:papeeta/repositories/repositories.dart';
-
-import 'package:provider/provider.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:papeeta/core/di/injection.dart';
+import 'package:papeeta/core/router/app_router.dart';
+import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
+import 'package:papeeta/features/ingredients/presentation/bloc/ingredient_bloc.dart';
+import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
 
-import 'package:papeeta/bloc/blocs.dart';
-import 'package:papeeta/routes/routes.dart';
-import 'package:papeeta/services/services.dart';
-
-void main() => runApp(const MyApp());
+void main() {
+  setupDependencies();
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
+    final authBloc = getIt<AuthBloc>();
+    final appRouter = AppRouter(authBloc: authBloc);
+
+    return MultiBlocProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthService()),
-        RepositoryProvider<RecipesRepository>(
-          create: (_) => RecipesRepositoryImpl(RecipesService()),
-        ),
+        BlocProvider<AuthBloc>.value(value: authBloc),
+        BlocProvider<IngredientBloc>(create: (_) => getIt<IngredientBloc>()),
+        BlocProvider<RecipeBloc>(create: (_) => getIt<RecipeBloc>()),
+        BlocProvider<CategoryBloc>(create: (_) => getIt<CategoryBloc>()),
       ],
-      child: MultiBlocProvider(
-        providers: [
-          BlocProvider(
-            create: (context) => RecipeBloc(recipesService: RecipesService()),
+      child: MaterialApp.router(
+        debugShowCheckedModeBanner: false,
+        title: 'Papeeta',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF3C1642),
+            onPrimary: const Color(0xFF3C1642),
+            onSecondary: const Color(0XFF086375),
           ),
-          BlocProvider(
-            create: (context) =>
-                CategoryBloc(categoriesService: CategoriesService()),
-          ),
-          BlocProvider(
-            create: (context) =>
-                IngredientBloc(ingredientService: IngredientService()),
-          ),
-        ],
-        child: MaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'Papeeta',
-          initialRoute: 'loading',
-          // theme: ThemeData(fontFamily: 'Inter'),
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: Color(0xFF3C1642),
-              onPrimary: Color(0xFF3C1642),
-              onSecondary: Color(0XFF086375),
-            ),
-            fontFamily: 'Inter',
-          ),
-          routes: appRoutes,
+          fontFamily: 'Inter',
         ),
+        routerConfig: appRouter.router,
       ),
     );
   }

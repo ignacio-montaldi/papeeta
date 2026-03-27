@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:papeeta/models/my_image_model.dart';
+import 'package:papeeta/features/recipes/domain/entities/recipe_image.dart';
+import 'package:papeeta/features/recipes/domain/entities/recipe_image_upload.dart';
 
 class MyImageWidget extends StatelessWidget {
-  final MyImageModel image;
+  final dynamic image;
   final BoxFit fit;
   final double? width;
   final double? height;
@@ -22,21 +23,25 @@ class MyImageWidget extends StatelessWidget {
     this.errorWidget,
   });
 
+  bool get isLocal => image is RecipeImageUpload;
+  bool get isRemote => image is RecipeImage;
+
   @override
   Widget build(BuildContext context) {
     Widget imageWidget;
 
-    if (image.isLocal && image.file != null) {
+    if (isLocal) {
+      final uploadImage = image as RecipeImageUpload;
       imageWidget = Image.file(
-        image.file!,
+        uploadImage.file,
         fit: fit,
         width: width,
         height: height,
       );
-    } else {
-      // Imágenes desde la red con caché
+    } else if (isRemote) {
+      final recipeImage = image as RecipeImage;
       imageWidget = CachedNetworkImage(
-        imageUrl: image.url!,
+        imageUrl: recipeImage.url,
         fit: fit,
         width: width,
         height: height,
@@ -52,6 +57,9 @@ class MyImageWidget extends StatelessWidget {
         errorWidget: (context, url, error) =>
             errorWidget ?? const Icon(Icons.broken_image, color: Colors.grey),
       );
+    } else {
+      imageWidget =
+          errorWidget ?? const Icon(Icons.broken_image, color: Colors.grey);
     }
 
     return ClipRRect(

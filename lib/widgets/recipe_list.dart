@@ -1,26 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:papeeta/bloc/blocs.dart';
-import 'package:papeeta/models/models.dart';
+import 'package:go_router/go_router.dart';
+import 'package:papeeta/features/recipes/domain/entities/recipe.dart';
+import 'package:papeeta/features/recipes/domain/entities/recipe_image.dart';
 import 'package:papeeta/widgets/widgets.dart';
 
 class RecipeList extends StatelessWidget {
   const RecipeList({super.key, required this.recipes});
 
-  final List<RecipeModel> recipes;
+  final List<Recipe> recipes;
 
   @override
   Widget build(BuildContext context) {
-    final RecipeBloc recipeBloc = BlocProvider.of<RecipeBloc>(context);
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        children: recipes.map((recipe) {
+      child: ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: recipes.length,
+        itemBuilder: (context, index) {
+          final recipe = recipes[index];
+          final imageUrl = recipe.images.isNotEmpty
+              ? recipe.images.first.url
+              : '';
           return GestureDetector(
             onTap: () {
-              recipeBloc.add(SelectedRecipe(recipe: recipe));
-              Navigator.pushNamed(context, 'recipe');
+              context.push('/recipe/${recipe.id}');
             },
             child: Padding(
               padding: const EdgeInsets.only(bottom: 15),
@@ -39,11 +43,7 @@ class RecipeList extends StatelessWidget {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(15),
                         child: MyImageWidget(
-                          image: MyImageModel(
-                            url: recipe.images.isNotEmpty
-                                ? recipe.images.map((image) => image.url).first
-                                : '',
-                          ),
+                          image: RecipeImage(url: imageUrl),
                           width: double.infinity,
                           height: double.infinity,
                           fit: BoxFit.cover, // para que llene sin deformarse
@@ -80,7 +80,7 @@ class RecipeList extends StatelessWidget {
               ),
             ),
           );
-        }).toList(),
+        },
       ),
     );
   }

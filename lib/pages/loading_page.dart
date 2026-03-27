@@ -1,45 +1,35 @@
 import 'package:flutter/material.dart';
-import 'package:papeeta/pages/pages.dart';
-import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
 
-import 'package:papeeta/services/auth_service.dart';
-
-class LoadingPage extends StatelessWidget {
+class LoadingPage extends StatefulWidget {
   const LoadingPage({super.key});
+
+  @override
+  State<LoadingPage> createState() => _LoadingPageState();
+}
+
+class _LoadingPageState extends State<LoadingPage> {
+  @override
+  void initState() {
+    super.initState();
+    context.read<AuthBloc>().add(CheckAuthStatus());
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FutureBuilder(
-        future: checkLoginState(context),
-        builder: (context, snapshot) => const Center(child: Text('Espere...')),
+      body: BlocListener<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is Authenticated) {
+            context.go('/');
+          } else if (state is Unauthenticated) {
+            context.go('/login');
+          }
+        },
+        child: const Center(child: Text('Espere...')),
       ),
     );
-  }
-
-  Future checkLoginState(BuildContext context) async {
-    final authService = Provider.of<AuthService>(context, listen: false);
-
-    final autenticando = await authService.isLoggedIn();
-
-    if (!context.mounted) return;
-
-    if (autenticando) {
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) => const HomePage(),
-          transitionDuration: const Duration(milliseconds: 0),
-        ),
-      );
-    } else {
-      Navigator.pushReplacement(
-        context,
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) => const LoginPage(),
-          transitionDuration: const Duration(milliseconds: 0),
-        ),
-      );
-    }
   }
 }

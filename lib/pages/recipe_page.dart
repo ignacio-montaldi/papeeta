@@ -1,107 +1,160 @@
-import 'package:carousel_slider/carousel_slider.dart';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:papeeta/bloc/recipe/recipe_bloc.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:carousel_slider/carousel_slider.dart';
+
 import 'package:papeeta/helpers/helpers.dart';
-import 'package:papeeta/models/models.dart';
-import 'package:papeeta/widgets/my_image_widget.dart';
+import 'package:papeeta/features/recipes/domain/entities/recipe.dart';
+import 'package:papeeta/features/recipes/domain/entities/ingredient.dart';
+import 'package:papeeta/features/recipes/domain/entities/preparation_step.dart';
+import 'package:papeeta/core/domain/entities/user.dart';
+import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
 
-class RecipePage extends StatelessWidget {
-  final RecipeModel? previewRecipe;
+class RecipePage extends StatefulWidget {
+  final int? recipeId;
+  final Recipe? previewRecipe;
+  final List<File> previewImages;
 
-  const RecipePage({super.key, this.previewRecipe});
+  const RecipePage({
+    super.key,
+    this.recipeId,
+    this.previewRecipe,
+    this.previewImages = const [],
+  }) : assert(
+         (recipeId != null) != (previewRecipe != null),
+         'Debes enviar recipeId o previewRecipe',
+       );
+
+  @override
+  State<RecipePage> createState() => _RecipePageState();
+}
+
+class _RecipePageState extends State<RecipePage> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.recipeId != null) {
+      context.read<RecipeBloc>().add(LoadRecipeDetail(widget.recipeId!));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final recipeBloc = BlocProvider.of<RecipeBloc>(context);
     final double appBarExpandedHeight = 300;
 
-    return SafeArea(
-      top: false,
-      child: Scaffold(
-        body: BlocBuilder<RecipeBloc, RecipeState>(
-          builder: (context, state) {
-            final bool isPreview = previewRecipe != null;
-
-            // 1️⃣ Resolver receta UNA sola vez
-            final RecipeModel? recipe = isPreview
-                ? previewRecipe
-                : state.selectedRecipe;
-
-            if (recipe == null) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            // 2️⃣ Si es real y falta data → cargar
-            if (!isPreview &&
-                (recipe.ingredients.isEmpty ||
-                    recipe.preparationSteps.isEmpty)) {
-              recipeBloc.getRecipeDetail(recipe.id);
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            return CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: <Widget>[
-                SliverAppBar(
-                  stretch: true,
-                  pinned: true,
-                  centerTitle: true,
-                  expandedHeight: appBarExpandedHeight,
-                  backgroundColor: Theme.of(context).colorScheme.onPrimary,
-                  iconTheme: const IconThemeData(color: Colors.white),
-                  flexibleSpace: _AppBarBody(
-                    recipe: recipe,
-                    appBarExpandedHeight: appBarExpandedHeight,
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                    child: ListView(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        _CategoriesList(
-                          categories: recipe.categories
-                              .map((c) => c.name)
-                              .toList(),
-                        ),
-                        const SizedBox(height: 10),
-                        const _SectionTitle(title: 'Ingredientes'),
-                        const SizedBox(height: 5),
-                        _IngredientList(ingredients: recipe.ingredients),
-                        const SizedBox(height: 10),
-                        const _SectionTitle(title: 'Preparación'),
-                        const SizedBox(height: 5),
-                        _PreparationStepsList(
-                          preparationSteps: recipe.preparationSteps,
-                        ),
-                        const SizedBox(height: 10),
-                        const _SectionTitle(title: 'Fuente'),
-                        const SizedBox(height: 5),
-                        _Link(link: recipe.link),
-                        const SizedBox(height: 10),
-                        if (recipe.author != null)
-                          _AuthorWidget(author: recipe.author!),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
+    if (widget.previewRecipe != null) {
+      return Scaffold(
+        body: _RecipeContent(
+          recipe: widget.previewRecipe!,
+          appBarExpandedHeight: appBarExpandedHeight,
+          previewImages: widget.previewImages,
         ),
+      );
+    }
+
+    return Scaffold(
+      body: BlocBuilder<RecipeBloc, RecipeState>(
+        builder: (context, state) {
+          if (state is RecipeDetailLoading ||
+              state is RecipeInitial ||
+              state is RecipeListLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state is RecipeError) {
+            return Center(child: Text(state.message));
+          }
+
+          if (state is RecipeDetailLoaded) {
+            return _RecipeContent(
+              recipe: state.recipe,
+              appBarExpandedHeight: appBarExpandedHeight,
+            );
+          }
+
+          return const Center(child: Text('Cargando receta...'));
+        },
       ),
     );
   }
 }
 
-class _AppBarBody extends StatefulWidget {
-  final RecipeModel recipe;
+class _RecipeContent extends StatelessWidget {
+  final Recipe recipe;
   final double appBarExpandedHeight;
+  final List<File> previewImages;
 
-  const _AppBarBody({required this.recipe, required this.appBarExpandedHeight});
+  const _RecipeContent({
+    required this.recipe,
+    required this.appBarExpandedHeight,
+    this.previewImages = const [],
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: <Widget>[
+        SliverAppBar(
+          stretch: true,
+          pinned: true,
+          centerTitle: true,
+          expandedHeight: appBarExpandedHeight,
+          backgroundColor: Theme.of(context).colorScheme.onPrimary,
+          iconTheme: const IconThemeData(color: Colors.white),
+          flexibleSpace: _AppBarBody(
+            recipe: recipe,
+            appBarExpandedHeight: appBarExpandedHeight,
+            previewImages: previewImages,
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: ListView(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                _CategoriesList(
+                  categories: recipe.categories.map((c) => c.name).toList(),
+                ),
+                const SizedBox(height: 10),
+                const _SectionTitle(title: 'Ingredientes'),
+                const SizedBox(height: 5),
+                _IngredientList(ingredients: recipe.ingredients),
+                const SizedBox(height: 10),
+                const _SectionTitle(title: 'Preparación'),
+                const SizedBox(height: 5),
+                _PreparationStepsList(preparationSteps: recipe.steps),
+                const SizedBox(height: 10),
+                const _SectionTitle(title: 'Fuente'),
+                const SizedBox(height: 5),
+                _Link(link: recipe.link),
+                const SizedBox(height: 10),
+                if (recipe.author != null)
+                  _AuthorWidget(author: recipe.author!),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AppBarBody extends StatefulWidget {
+  final Recipe recipe;
+  final double appBarExpandedHeight;
+  final List<File> previewImages;
+
+  const _AppBarBody({
+    required this.recipe,
+    required this.appBarExpandedHeight,
+    this.previewImages = const [],
+  });
 
   @override
   State<_AppBarBody> createState() => _AppBarBodyState();
@@ -113,7 +166,7 @@ class _AppBarBodyState extends State<_AppBarBody> {
   bool needsSecondLine(String title) {
     final textSpan = TextSpan(
       text: title,
-      style: TextStyle(
+      style: const TextStyle(
         color: Colors.white,
         fontWeight: FontWeight.bold,
         fontSize: 18,
@@ -122,35 +175,35 @@ class _AppBarBodyState extends State<_AppBarBody> {
     final tp = TextPainter(text: textSpan, textDirection: TextDirection.ltr);
     tp.layout();
     final screenWidth = MediaQuery.of(context).size.width;
-    return tp.width >
-        screenWidth -
-            80; // number is horizontal padding value for the actual widget
+    return tp.width > screenWidth - 80;
   }
 
   @override
   Widget build(BuildContext context) {
     final images = widget.recipe.images;
+    final hasPreviewImages = widget.previewImages.isNotEmpty;
+    final imageCount = hasPreviewImages
+        ? widget.previewImages.length
+        : images.length;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // constraints.maxHeight varía entre toolbarHeight y expandedHeight
         final double currentHeight = constraints.maxHeight;
         final double maxHeight = widget.appBarExpandedHeight;
-        const double minHeight =
-            kToolbarHeight + 20; // coincidir con tu cálculo
+        const double minHeight = kToolbarHeight + 20;
         final double t = ((currentHeight - minHeight) / (maxHeight - minHeight))
             .clamp(0.0, 1.0);
 
         return FlexibleSpaceBar(
-          collapseMode: CollapseMode.parallax, // o CollapseMode.pin
+          collapseMode: CollapseMode.parallax,
           stretchModes: const [StretchMode.zoomBackground],
           titlePadding: EdgeInsets.lerp(
             EdgeInsets.only(
               left: 60,
               bottom: needsSecondLine(widget.recipe.title) ? 8 : 15,
               right: 16,
-            ), // colapsado
-            const EdgeInsets.only(left: 16, bottom: 32, right: 16), // expandido
+            ),
+            const EdgeInsets.only(left: 16, bottom: 32, right: 16),
             t,
           ),
           title: Text(
@@ -165,34 +218,49 @@ class _AppBarBodyState extends State<_AppBarBody> {
             fit: StackFit.expand,
             children: [
               SizedBox.expand(
-                child: CarouselSlider.builder(
-                  itemCount: images.length,
-                  itemBuilder: (context, index, _) {
-                    return SizedBox.expand(
-                      child: MyImageWidget(
-                        image: images[index], // 🔥 local o network
-                        fit: BoxFit.cover,
+                child: imageCount == 0
+                    ? Container(color: Theme.of(context).colorScheme.onPrimary)
+                    : CarouselSlider.builder(
+                        itemCount: imageCount,
+                        itemBuilder: (context, index, _) {
+                          if (hasPreviewImages) {
+                            return SizedBox.expand(
+                              child: Image.file(
+                                widget.previewImages[index],
+                                fit: BoxFit.cover,
+                              ),
+                            );
+                          }
+
+                          return SizedBox.expand(
+                            child: CachedNetworkImage(
+                              imageUrl: images[index].url,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                              errorWidget: (context, url, error) =>
+                                  const Icon(Icons.broken_image),
+                            ),
+                          );
+                        },
+                        options: CarouselOptions(
+                          height: double.infinity,
+                          viewportFraction: 1.0,
+                          scrollPhysics: const BouncingScrollPhysics(),
+                          onPageChanged: (index, reason) {
+                            setState(() => currentIndex = index);
+                          },
+                        ),
                       ),
-                    );
-                  },
-                  options: CarouselOptions(
-                    height: double.infinity,
-                    viewportFraction: 1.0,
-                    scrollPhysics: const BouncingScrollPhysics(),
-                    onPageChanged: (index, reason) {
-                      setState(() => currentIndex = index);
-                    },
-                  ),
-                ),
               ),
-              // capa de gradiente
               IgnorePointer(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.center,
                       end: Alignment.bottomCenter,
-                      colors: <Color>[
+                      colors: [
                         Colors.black.withAlpha(0),
                         Colors.black.withAlpha(180),
                       ],
@@ -200,14 +268,13 @@ class _AppBarBodyState extends State<_AppBarBody> {
                   ),
                 ),
               ),
-              // indicadores
               Positioned(
                 bottom: 16,
                 left: 0,
                 right: 0,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(images.length, (index) {
+                  children: List.generate(imageCount, (index) {
                     return AnimatedContainer(
                       duration: const Duration(milliseconds: 250),
                       width: currentIndex == index ? 10 : 8,
@@ -246,7 +313,7 @@ class _CategoriesList extends StatelessWidget {
           (category) => Chip(
             label: Text(category),
             elevation: 2,
-            shape: StadiumBorder(),
+            shape: const StadiumBorder(),
             padding: EdgeInsets.zero,
             materialTapTargetSize: MaterialTapTargetSize.padded,
           ),
@@ -277,7 +344,7 @@ class _SectionTitle extends StatelessWidget {
 class _IngredientList extends StatelessWidget {
   const _IngredientList({required this.ingredients});
 
-  final List<IngredientModel> ingredients;
+  final List<Ingredient> ingredients;
 
   @override
   Widget build(BuildContext context) {
@@ -285,60 +352,53 @@ class _IngredientList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ...ingredients.map((ingredient) {
-          String boldText = '';
+          String boldText = '\u2022 ';
           String regularText = '';
 
-          //ingredient.measure.id null es vacío/incontable
-          //ingredient.measure.id 11 es unidad
-
-          boldText += '\u2022 ';
+          // Asumimos que 11 sigue siendo el ID "unidad"
           if (ingredient.amount != null && ingredient.amount != 0) {
             boldText += formatDouble(ingredient.amount ?? 0);
           }
 
-          if (ingredient.measure != null &&
-              ingredient.measure?.id != null &&
-              ingredient.measure?.id != 11) {
-            boldText += ' ${ingredient.measure!.unitKey}';
-          }
-          if (ingredient.measure != null &&
-              ingredient.measure?.id != null &&
-              ingredient.measure?.id != 11 &&
-              ingredient.amount != 1) {
-            boldText += 's';
+          if (ingredient.unit != null &&
+              ingredient.unit?.id != null &&
+              ingredient.unit?.id != 11) {
+            boldText += ' ${ingredient.unit!.key}';
+            if (ingredient.amount != null && ingredient.amount != 1) {
+              boldText += 's';
+            }
           }
 
           if (ingredient.amount != null && ingredient.amount != 0) {
             regularText += ' ';
           }
-          if (ingredient.measure != null &&
-              ingredient.measure?.id != null &&
-              ingredient.measure?.id != 11 &&
-              ingredient.measure!.displayName != '') {
+          if (ingredient.unit != null &&
+              ingredient.unit?.id != null &&
+              ingredient.unit?.id != 11 &&
+              ingredient.unit!.name.isNotEmpty) {
             regularText += 'de ';
           }
+
           final bool noMeasureOrAmmount = (boldText == '\u2022 ');
 
           regularText += noMeasureOrAmmount
               ? ingredient.name.capitalize()
               : ingredient.name;
 
-          return Column(
-            children: [
-              RichText(
-                text: TextSpan(
-                  style: TextStyle(color: Colors.black54, fontSize: 15),
-                  children: <TextSpan>[
-                    TextSpan(
-                      text: boldText,
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    TextSpan(text: regularText),
-                  ],
-                ),
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 5.0),
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(color: Colors.black54, fontSize: 15),
+                children: <TextSpan>[
+                  TextSpan(
+                    text: boldText,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  TextSpan(text: regularText),
+                ],
               ),
-              SizedBox(height: 5),
-            ],
+            ),
           );
         }),
       ],
@@ -347,7 +407,7 @@ class _IngredientList extends StatelessWidget {
 }
 
 class _PreparationStepsList extends StatelessWidget {
-  final List<PreparationStepModel> preparationSteps;
+  final List<PreparationStep> preparationSteps;
   const _PreparationStepsList({required this.preparationSteps});
 
   @override
@@ -356,22 +416,20 @@ class _PreparationStepsList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ...preparationSteps.map((step) {
-          return Column(
-            children: [
-              RichText(
-                text: TextSpan(
-                  style: TextStyle(color: Colors.black54, fontSize: 15),
-                  children: <TextSpan>[
-                    TextSpan(
-                      text: '${step.stepNumber}. ',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    TextSpan(text: step.description),
-                  ],
-                ),
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 5.0),
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(color: Colors.black54, fontSize: 15),
+                children: <TextSpan>[
+                  TextSpan(
+                    text: '${step.order}. ',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  TextSpan(text: step.description),
+                ],
               ),
-              SizedBox(height: 5),
-            ],
+            ),
           );
         }),
       ],
@@ -386,19 +444,19 @@ class _Link extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return link != null
+    return link != null && link!.isNotEmpty
         ? GestureDetector(
             onTap: () => launchUrl(link!),
             child: Text(
               link!,
-              style: TextStyle(
+              style: const TextStyle(
                 color: Colors.blue,
                 decoration: TextDecoration.underline,
                 decorationColor: Colors.blue,
               ),
             ),
           )
-        : Text(
+        : const Text(
             "Parece que esta es una receta original, recuerda agradecerle a quien te la envió 😊",
           );
   }
@@ -407,7 +465,7 @@ class _Link extends StatelessWidget {
 class _AuthorWidget extends StatelessWidget {
   const _AuthorWidget({required this.author});
 
-  final UsuarioModel author;
+  final User author;
 
   @override
   Widget build(BuildContext context) {
@@ -416,10 +474,16 @@ class _AuthorWidget extends StatelessWidget {
         CircleAvatar(
           backgroundColor: Theme.of(context).colorScheme.onSecondary,
           radius: 18,
-          child: Text(author.nombre[0], style: TextStyle(color: Colors.white)),
+          child: Text(
+            author.name.isNotEmpty ? author.name[0].toUpperCase() : '?',
+            style: const TextStyle(color: Colors.white),
+          ),
         ),
-        SizedBox(width: 10),
-        Text("agregada por ${author.nombre}", style: TextStyle(fontSize: 15)),
+        const SizedBox(width: 10),
+        Text(
+          "agregada por ${author.name}",
+          style: const TextStyle(fontSize: 15),
+        ),
       ],
     );
   }
