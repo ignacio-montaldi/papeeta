@@ -11,7 +11,7 @@ import 'package:papeeta/features/recipes/domain/repositories/recipes_repository.
 import 'package:papeeta/features/recipes/data/repositories/recipes_repository_impl.dart';
 import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
 import 'package:papeeta/global/enviroment.dart';
-import 'package:papeeta/services/papeeta_interceptor.dart';
+import 'package:papeeta/core/interceptor/papeeta_interceptor.dart';
 import 'package:papeeta/features/ingredients/data/datasources/ingredients_remote_datasource.dart';
 import 'package:papeeta/features/ingredients/data/datasources/ingredients_remote_datasource_impl.dart';
 import 'package:papeeta/features/ingredients/domain/repositories/ingredient_repository.dart';

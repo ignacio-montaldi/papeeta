@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:papeeta/bloc/blocs.dart' as old_blocs;
 import 'package:papeeta/core/di/injection.dart';
 import 'package:papeeta/core/router/app_router.dart';
 import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
+import 'package:papeeta/features/ingredients/presentation/bloc/ingredient_bloc.dart';
 import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
 
 void main() {
@@ -23,9 +23,7 @@ class MyApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>.value(value: authBloc),
-        BlocProvider<old_blocs.IngredientBloc>(
-          create: (_) => getIt<old_blocs.IngredientBloc>(),
-        ),
+        BlocProvider<IngredientBloc>(create: (_) => getIt<IngredientBloc>()),
         BlocProvider<RecipeBloc>(create: (_) => getIt<RecipeBloc>()),
         BlocProvider<CategoryBloc>(create: (_) => getIt<CategoryBloc>()),
       ],

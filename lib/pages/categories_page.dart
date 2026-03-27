@@ -4,8 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:papeeta/core/domain/entities/category.dart';
 import 'package:papeeta/core/domain/entities/category_group.dart';
 import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
+import 'package:papeeta/features/recipes/domain/entities/recipe_image.dart';
 import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
-import 'package:papeeta/models/models.dart';
 import 'package:papeeta/widgets/widgets.dart';
 
 class CategoriesPage extends StatefulWidget {
@@ -156,7 +156,7 @@ class _CategoryGrid extends StatelessWidget {
                   child:
                       category.imageUrl != null && category.imageUrl!.isNotEmpty
                       ? MyImageWidget(
-                          image: MyImageModel(url: category.imageUrl!),
+                          image: RecipeImage(url: category.imageUrl!),
                           height: 60,
                           fit: BoxFit.cover,
                         )
@@ -276,7 +276,7 @@ class _GroupItem extends StatelessWidget {
                 backgroundColor: Colors.white,
                 child: imageUrl != null && imageUrl!.isNotEmpty
                     ? MyImageWidget(
-                        image: MyImageModel(url: imageUrl!),
+                        image: RecipeImage(url: imageUrl!),
                         width: 45,
                         height: 45,
                       )

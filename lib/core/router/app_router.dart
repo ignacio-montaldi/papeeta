@@ -23,13 +23,13 @@ class AppRouter {
     redirect: (context, state) {
       final authState = authBloc.state;
       final isAuthenticated = authState is Authenticated;
-      final isLoading = authState is AuthLoading || authState is AuthInitial;
+      final isInitialLoading = authState is AuthInitial;
       final isOnAuthPage =
           state.matchedLocation == '/login' ||
           state.matchedLocation == '/register' ||
           state.matchedLocation == '/loading';
 
-      if (isLoading) {
+      if (isInitialLoading) {
         return state.matchedLocation == '/loading' ? null : '/loading';
       }
 

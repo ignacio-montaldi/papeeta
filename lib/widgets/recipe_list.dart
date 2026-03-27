@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:papeeta/features/recipes/domain/entities/recipe.dart';
-import 'package:papeeta/models/my_image_model.dart';
+import 'package:papeeta/features/recipes/domain/entities/recipe_image.dart';
 import 'package:papeeta/widgets/widgets.dart';
 
 class RecipeList extends StatelessWidget {
@@ -43,7 +43,7 @@ class RecipeList extends StatelessWidget {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(15),
                         child: MyImageWidget(
-                          image: MyImageModel(url: imageUrl),
+                          image: RecipeImage(url: imageUrl),
                           width: double.infinity,
                           height: double.infinity,
                           fit: BoxFit.cover, // para que llene sin deformarse
