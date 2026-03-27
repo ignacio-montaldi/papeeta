@@ -44,4 +44,10 @@ class RecipesRepositoryImpl implements RecipesRepository {
     final dtos = await _dataSource.getRecipesByCategory(categoryId);
     return dtos.map(RecipeMapper.toEntity).toList();
   }
+
+  @override
+  Future<List<Recipe>> getHomeRecipeList() async {
+    final dtos = await _dataSource.getHomeRecipeList();
+    return dtos.map(RecipeMapper.toEntity).toList();
+  }
 }

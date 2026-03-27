@@ -14,4 +14,6 @@ abstract class RecipesRepository {
   });
 
   Future<List<Recipe>> getRecipesByCategory(int categoryId);
+
+  Future<List<Recipe>> getHomeRecipeList();
 }

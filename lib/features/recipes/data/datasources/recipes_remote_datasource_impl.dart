@@ -54,4 +54,16 @@ class RecipesRemoteDataSourceImpl implements RecipesRemoteDataSource {
         .map((e) => RecipeResponseDto.fromJson(e))
         .toList();
   }
+
+  @override
+  Future<List<RecipeResponseDto>> getHomeRecipeList() async {
+    final res = await dio.get(
+      '/recipes/random',
+      queryParameters: {'limit': 20, 'page': 1},
+    );
+
+    return (res.data['recipes'] as List)
+        .map((e) => RecipeResponseDto.fromJson(e))
+        .toList();
+  }
 }

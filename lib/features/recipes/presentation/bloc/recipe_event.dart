@@ -7,10 +7,6 @@ sealed class RecipeEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-final class LoadRecipes extends RecipeEvent {
-  const LoadRecipes();
-}
-
 final class LoadRecipeDetail extends RecipeEvent {
   final int id;
   const LoadRecipeDetail(this.id);
@@ -37,4 +33,8 @@ final class SelectRecipe extends RecipeEvent {
 
 final class RestoreHomeRecipes extends RecipeEvent {
   const RestoreHomeRecipes();
+}
+
+final class LoadHomeRecipes extends RecipeEvent {
+  const LoadHomeRecipes();
 }

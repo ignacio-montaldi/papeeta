@@ -23,12 +23,12 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    context.read<RecipeBloc>().add(const LoadRecipes());
+    context.read<RecipeBloc>().add(const LoadHomeRecipes());
     context.read<CategoryBloc>().add(LoadCategories());
   }
 
   void _onRefresh() {
-    context.read<RecipeBloc>().add(const LoadRecipes());
+    context.read<RecipeBloc>().add(const LoadHomeRecipes());
     context.read<CategoryBloc>().add(LoadCategories());
   }
 
@@ -36,105 +36,106 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
-        final userName = authState is Authenticated ? authState.user.name : 'Papeeta';
+        final userName = authState is Authenticated
+            ? authState.user.name
+            : 'Papeeta';
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(
-              userName,
-              style: const TextStyle(color: Colors.white),
+            title: Text(userName, style: const TextStyle(color: Colors.white)),
+            elevation: 1,
+            backgroundColor: Theme.of(context).colorScheme.onPrimary,
+            leading: Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu, color: Colors.white),
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
             ),
-        elevation: 1,
-        backgroundColor: Theme.of(context).colorScheme.onPrimary,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, color: Colors.white),
-            onPressed: () => Scaffold.of(context).openDrawer(),
+            automaticallyImplyLeading: false,
           ),
-        ),
-        automaticallyImplyLeading: false,
-      ),
-      drawer: CustomDrawer(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.pushNamed(context, 'addRecipe');
-        },
-        backgroundColor: Theme.of(context).colorScheme.onPrimary,
-        child: Icon(Icons.post_add, color: Colors.white),
-      ),
-      body: BlocListener<RecipeBloc, RecipeState>(
-        listener: (context, recipeState) {
-          switch (recipeState) {
-            case RecipeListLoaded():
-              _refreshController.refreshCompleted();
-            case RecipeError():
-              _refreshController.refreshFailed();
-            default:
-              break;
-          }
-        },
-        child: BlocBuilder<CategoryBloc, CategoryState>(
-          builder: (context, categoryState) {
-            return BlocBuilder<RecipeBloc, RecipeState>(
-              builder: (context, recipeState) {
-                if (categoryState is CategoryLoading ||
-                    categoryState is CategoryInitial ||
-                    recipeState is RecipeInitial ||
-                    recipeState is RecipeListLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+          drawer: CustomDrawer(),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              Navigator.pushNamed(context, 'addRecipe');
+            },
+            backgroundColor: Theme.of(context).colorScheme.onPrimary,
+            child: Icon(Icons.post_add, color: Colors.white),
+          ),
+          body: BlocListener<RecipeBloc, RecipeState>(
+            listener: (context, recipeState) {
+              switch (recipeState) {
+                case RecipeListLoaded():
+                  _refreshController.refreshCompleted();
+                case RecipeError():
+                  _refreshController.refreshFailed();
+                default:
+                  break;
+              }
+            },
+            child: BlocBuilder<CategoryBloc, CategoryState>(
+              builder: (context, categoryState) {
+                return BlocBuilder<RecipeBloc, RecipeState>(
+                  builder: (context, recipeState) {
+                    if (categoryState is CategoryLoading ||
+                        categoryState is CategoryInitial ||
+                        recipeState is RecipeInitial ||
+                        recipeState is RecipeListLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                if (categoryState is CategoryError) {
-                  return Center(child: Text(categoryState.message));
-                }
+                    if (categoryState is CategoryError) {
+                      return Center(child: Text(categoryState.message));
+                    }
 
-                if (recipeState is RecipeError) {
-                  return Center(child: Text(recipeState.message));
-                }
+                    if (recipeState is RecipeError) {
+                      return Center(child: Text(recipeState.message));
+                    }
 
-                if (categoryState is CategoryLoaded) {
-                  final categories = categoryState.categories;
-                  final recipes = switch (recipeState) {
-                    RecipeListLoaded(:final recipes) => recipes,
-                    RecipeDetailLoaded(:final recipes) => recipes,
-                    _ => <Recipe>[],
-                  };
+                    if (categoryState is CategoryLoaded) {
+                      final categories = categoryState.categories;
+                      final recipes = switch (recipeState) {
+                        RecipeListLoaded(:final recipes) => recipes,
+                        RecipeDetailLoaded(:final recipes) => recipes,
+                        _ => <Recipe>[],
+                      };
 
-                  if (categories.isEmpty && recipes.isEmpty) {
-                    return const Center(
-                      child: Text('No se encontraron recetas ni categorías'),
-                    );
-                  }
-
-                  return SmartRefresher(
-                    controller: _refreshController,
-                    enablePullDown: true,
-                    onRefresh: _onRefresh,
-                    physics: const BouncingScrollPhysics(),
-                    child: ListView(
-                      padding: const EdgeInsets.only(top: 20),
-                      children: [
-                        if (categories.isNotEmpty)
-                          _CategoriesList(categories: categories),
-                        const SizedBox(height: 20),
-                        if (recipes.isNotEmpty)
-                          RecipeList(recipes: recipes)
-                        else
-                          const Center(
-                            child: Text('No se encontraron recetas.'),
+                      if (categories.isEmpty && recipes.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            'No se encontraron recetas ni categorías',
                           ),
-                      ],
-                    ),
-                  );
-                }
+                        );
+                      }
 
-                return const SizedBox.shrink();
+                      return SmartRefresher(
+                        controller: _refreshController,
+                        enablePullDown: true,
+                        onRefresh: _onRefresh,
+                        physics: const BouncingScrollPhysics(),
+                        child: ListView(
+                          padding: const EdgeInsets.only(top: 20),
+                          children: [
+                            if (categories.isNotEmpty)
+                              _CategoriesList(categories: categories),
+                            const SizedBox(height: 20),
+                            if (recipes.isNotEmpty)
+                              RecipeList(recipes: recipes)
+                            else
+                              const Center(
+                                child: Text('No se encontraron recetas.'),
+                              ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return const SizedBox.shrink();
+                  },
+                );
               },
-            );
-          },
-        ),
-      ),
-    );
+            ),
+          ),
+        );
       },
     );
   }
@@ -243,12 +244,13 @@ class _CategoryItem extends StatelessWidget {
               radius: 35,
               backgroundColor: Colors.white,
               child: imageUrl != null && imageUrl!.isNotEmpty
-                  ? ClipOval(
+                  ? Padding(
+                      padding: const EdgeInsets.all(8.0),
                       child: CachedNetworkImage(
                         imageUrl: imageUrl!,
                         fit: BoxFit.cover,
-                        width: 45,
-                        height: 45,
+                        width: 70,
+                        height: 70,
                         placeholder: (context, url) => const Padding(
                           padding: EdgeInsets.all(12.0),
                           child: CircularProgressIndicator(strokeWidth: 2),

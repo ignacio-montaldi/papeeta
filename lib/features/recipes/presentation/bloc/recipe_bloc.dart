@@ -13,11 +13,11 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
   List<Recipe>? _cachedHomeRecipes;
 
   RecipeBloc(this.repository) : super(const RecipeInitial()) {
-    on<LoadRecipes>(_onLoadRecipes);
     on<LoadRecipeDetail>(_onLoadRecipeDetail);
     on<LoadRecipesByCategory>(_onLoadByCategory);
     on<SelectRecipe>(_onSelectRecipe);
     on<RestoreHomeRecipes>(_onRestoreHomeRecipes);
+    on<LoadHomeRecipes>(_onLoadHomeRecipes);
   }
 
   List<Recipe> _currentRecipesList(RecipeState state) {
@@ -28,17 +28,17 @@ class RecipeBloc extends Bloc<RecipeEvent, RecipeState> {
     };
   }
 
-  Future<void> _onLoadRecipes(
-    LoadRecipes event,
+  Future<void> _onLoadHomeRecipes(
+    LoadHomeRecipes event,
     Emitter<RecipeState> emit,
   ) async {
     emit(const RecipeListLoading());
     try {
-      final recipes = await repository.getRecipes();
+      final recipes = await repository.getHomeRecipeList();
       _cachedHomeRecipes = recipes;
       emit(RecipeListLoaded(recipes));
     } catch (e) {
-      emit(RecipeError('Error al cargar recetas'));
+      emit(RecipeError('Error al cargar recetas de la home'));
     }
   }
 
