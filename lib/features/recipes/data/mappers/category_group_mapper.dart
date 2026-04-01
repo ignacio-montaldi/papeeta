@@ -10,7 +10,7 @@ class CategoryGroupMapper {
       final raw = dto.imageUrl!;
       imageUrl = raw.startsWith('http')
           ? raw
-          : '${Enviroment.baseUrl}/${raw.replaceFirst(RegExp(r'^/'), '')}';
+          : '${Enviroment.uploadsUrl}/${raw.replaceFirst(RegExp(r'^/'), '')}';
     }
     return CategoryGroup(id: dto.id, name: dto.name, imageUrl: imageUrl);
   }

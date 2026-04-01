@@ -17,6 +17,10 @@ import 'package:papeeta/features/ingredients/data/datasources/ingredients_remote
 import 'package:papeeta/features/ingredients/domain/repositories/ingredient_repository.dart';
 import 'package:papeeta/features/ingredients/data/repositories/ingredient_repository_impl.dart';
 import 'package:papeeta/features/ingredients/presentation/bloc/ingredient_bloc.dart';
+import 'package:papeeta/features/groups/data/datasources/groups_remote_datasource.dart';
+import 'package:papeeta/features/groups/data/repositories/groups_repository_impl.dart';
+import 'package:papeeta/features/groups/domain/repositories/groups_repository.dart';
+import 'package:papeeta/features/groups/presentation/bloc/groups_bloc.dart';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:papeeta/features/auth/data/datasources/auth_local_datasource.dart';
@@ -35,6 +39,7 @@ void setupDependencies() {
   _registerRecipes();
   _registerCategories();
   _registerIngredients();
+  _registerGroups();
 }
 
 void _registerDio() {
@@ -118,5 +123,20 @@ void _registerAuth() {
 
   getIt.registerFactory<AuthBloc>(
     () => AuthBloc(repository: getIt<AuthRepository>()),
+  );
+}
+
+void _registerGroups() {
+  getIt.registerLazySingleton<GroupsRemoteDataSource>(
+    () => GroupsRemoteDataSourceImpl(dio: getIt<Dio>()),
+  );
+
+  getIt.registerLazySingleton<GroupsRepository>(
+    () =>
+        GroupsRepositoryImpl(remoteDataSource: getIt<GroupsRemoteDataSource>()),
+  );
+
+  getIt.registerFactory<GroupsBloc>(
+    () => GroupsBloc(repository: getIt<GroupsRepository>()),
   );
 }

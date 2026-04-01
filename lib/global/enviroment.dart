@@ -1,8 +1,8 @@
 class Enviroment {
-  // static String baseUrl = "http://localhost:3000";
-  static String baseUrl = "https://allowing-starling-heroic.ngrok-free.app";
+  static String baseUrlDev = "http://192.168.0.4:3000";
+  static String baseUrlProd = "https://allowing-starling-heroic.ngrok-free.app";
 
-  static String apiUrl = '$baseUrl/api';
+  static String apiUrl = '$baseUrlDev/api';
 
-  static String uploadsUrl = baseUrl;
+  static String uploadsUrl = baseUrlProd;
 }

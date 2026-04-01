@@ -12,7 +12,7 @@ class RecipeImageMapper {
       url: (dto.url.isNotEmpty)
           ? (dto.url.startsWith('http')
                 ? dto.url
-                : '${Enviroment.baseUrl}${dto.url}')
+                : '${Enviroment.uploadsUrl}${dto.url}')
           : dto.url,
     );
   }

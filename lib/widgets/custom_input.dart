@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class CustomInput extends StatelessWidget {
+class CustomInput extends StatefulWidget {
   final IconData icon;
   final String placeholder;
   final TextEditingController textController;
@@ -15,6 +15,13 @@ class CustomInput extends StatelessWidget {
     this.keyboardType = TextInputType.text,
     this.isPassword = false,
   });
+
+  @override
+  State<CustomInput> createState() => _CustomInputState();
+}
+
+class _CustomInputState extends State<CustomInput> {
+  bool _obscureText = true;
 
   @override
   Widget build(BuildContext context) {
@@ -33,15 +40,28 @@ class CustomInput extends StatelessWidget {
       ),
       child: TextField(
         autocorrect: false,
-        keyboardType: keyboardType,
-        controller: textController,
-        obscureText: isPassword,
+        keyboardType: widget.keyboardType,
+        controller: widget.textController,
+        obscureText: widget.isPassword ? _obscureText : false,
         decoration: InputDecoration(
-          prefixIcon: Icon(icon),
+          prefixIcon: Icon(widget.icon),
           focusedBorder: InputBorder.none,
           border: InputBorder.none,
-          hintText: placeholder,
+          hintText: widget.placeholder,
           hintStyle: const TextStyle(color: Colors.black26),
+          suffixIcon: widget.isPassword
+              ? IconButton(
+                  icon: Icon(
+                    _obscureText ? Icons.visibility_off : Icons.visibility,
+                    color: Colors.black54,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscureText = !_obscureText;
+                    });
+                  },
+                )
+              : null,
         ),
       ),
     );

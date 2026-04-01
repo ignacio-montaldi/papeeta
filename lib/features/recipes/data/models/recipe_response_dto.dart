@@ -48,10 +48,14 @@ class RecipeResponseDto {
                   : [])
               .map((e) => PreparationStepDto.fromJson(e))
               .toList(),
-      categories: (json['categories'] as List<dynamic>)
+      categories: (json['categories'] != null
+              ? json['categories'] as List<dynamic>
+              : [])
           .map((e) => CategoryDto.fromJson(e))
           .toList(),
-      images: (json['images'] as List<dynamic>)
+      images: (json['images'] != null
+              ? json['images'] as List<dynamic>
+              : [])
           .map((e) => RecipeImageDto.fromJson(e))
           .toList(),
       author: json['author'] != null ? UserDto.fromJson(json['author']) : null,

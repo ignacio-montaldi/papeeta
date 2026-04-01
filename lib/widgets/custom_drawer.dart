@@ -45,6 +45,14 @@ class CustomDrawer extends StatelessWidget {
                       context.push('/categories');
                     },
                   ),
+                  ListTile(
+                    title: const Text('Mis Grupos'),
+                    leading: const Icon(Icons.group),
+                    onTap: () {
+                      context.pop();
+                      context.push('/groups');
+                    },
+                  ),
                 ],
               ),
             ),

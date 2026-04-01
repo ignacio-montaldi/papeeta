@@ -11,7 +11,7 @@ class CategoryMapper {
       imageUrl: (dto.imageUrl != null && dto.imageUrl!.isNotEmpty)
           ? (dto.imageUrl!.startsWith('http')
                 ? dto.imageUrl
-                : '${Enviroment.baseUrl}${dto.imageUrl}')
+                  : '${Enviroment.uploadsUrl}${dto.imageUrl}')
           : dto.imageUrl,
       groupId: dto.groupId,
       group: dto.group != null

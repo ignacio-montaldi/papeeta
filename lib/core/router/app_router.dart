@@ -9,6 +9,10 @@ import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:papeeta/features/recipes/domain/repositories/recipes_repository.dart'
     as recipes_domain;
 import 'package:papeeta/features/recipes/presentation/bloc/recipe_form/recipe_form_cubit.dart';
+import 'package:papeeta/features/groups/presentation/bloc/groups_bloc.dart';
+import 'package:papeeta/features/groups/presentation/bloc/groups_event.dart';
+import 'package:papeeta/features/groups/presentation/pages/groups_page.dart';
+import 'package:papeeta/features/groups/presentation/pages/group_detail_page.dart';
 import 'package:papeeta/pages/pages.dart';
 
 class AppRouter {
@@ -94,6 +98,24 @@ class AppRouter {
           return RecipePage(
             previewRecipe: recipe,
             previewImages: images?.cast<File>() ?? [],
+          );
+        },
+      ),
+      GoRoute(
+        path: '/groups',
+        builder: (context, state) => BlocProvider(
+          create: (context) => getIt<GroupsBloc>()..add(LoadMyGroups()),
+          child: const GroupsPage(),
+        ),
+      ),
+      GoRoute(
+        path: '/groups/:id',
+        builder: (context, state) {
+          final groupId = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
+          return BlocProvider(
+            create: (context) =>
+                getIt<GroupsBloc>()..add(LoadGroupDetail(groupId)),
+            child: GroupDetailPage(groupId: groupId),
           );
         },
       ),
