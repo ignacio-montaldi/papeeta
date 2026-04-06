@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:papeeta/core/di/injection.dart';
@@ -8,7 +9,9 @@ import 'package:papeeta/features/ingredients/presentation/bloc/ingredient_bloc.d
 import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
 
 void main() {
-  setupDependencies();
+  if (!getIt.isRegistered<Dio>()) {
+    setupDependencies();
+  }
   runApp(const MyApp());
 }
 

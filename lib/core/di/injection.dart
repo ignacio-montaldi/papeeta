@@ -34,8 +34,8 @@ import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
 final getIt = GetIt.instance;
 
 void setupDependencies() {
-  _registerAuth();
   _registerDio();
+  _registerAuth();
   _registerRecipes();
   _registerCategories();
   _registerIngredients();
@@ -121,7 +121,7 @@ void _registerAuth() {
     ),
   );
 
-  getIt.registerFactory<AuthBloc>(
+  getIt.registerLazySingleton<AuthBloc>(
     () => AuthBloc(repository: getIt<AuthRepository>()),
   );
 }

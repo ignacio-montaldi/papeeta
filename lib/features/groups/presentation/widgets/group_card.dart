@@ -86,7 +86,7 @@ class GroupCard extends StatelessWidget {
                     children: [
                       _InfoChip(
                         icon: Icons.person,
-                        label: '${group.members.length + 1} miembros',
+                        label: '${group.members.length} miembros',
                       ),
                       const SizedBox(width: 12),
                       _InfoChip(

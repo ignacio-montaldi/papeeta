@@ -163,7 +163,7 @@ class _MembersSection extends StatelessWidget {
           runSpacing: 8,
           children: [
             _MemberChip(name: owner.name, isOwner: true),
-            ...members.map(
+            ...members.where((m) => m.id != owner.id).map(
               (m) => _MemberChip(
                 name: m.name,
                 isOwner: false,
