@@ -56,3 +56,10 @@ flutter:
         weight: 600
       - asset: fonts/Inter/Inter-Bold.ttf
         weight: 700
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "images/app_icon/launcher_icon.png"
+  adaptive_icon_background: "#3C1642"
+  adaptive_icon_foreground: "images/app_icon/launcher_icon.png"
