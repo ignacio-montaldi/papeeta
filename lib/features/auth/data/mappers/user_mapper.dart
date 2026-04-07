@@ -5,7 +5,8 @@ class UserMapper {
   static User toEntity(UserDto dto) {
     return User(
       id: dto.id,
-      name: dto.name,
+      nombreUsuario: dto.nombreUsuario,
+      alias: dto.alias,
       email: dto.email,
     );
   }

@@ -59,24 +59,32 @@ class CustomDrawer extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (user != null && user.name.isNotEmpty) ...[
+                  if (user != null && user.alias != null && user.alias!.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     Text(
-                      user.name,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                      user.alias!,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ],
-                  if (user != null && user.email != null && user.email!.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
-                      user.email!,
+                      '@${user.nombreUsuario}',
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.7),
-                        fontSize: 12,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ] else if (user != null && user.nombreUsuario.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      user.nombreUsuario,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],

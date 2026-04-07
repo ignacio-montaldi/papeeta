@@ -469,21 +469,19 @@ class _AuthorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authorName = author.alias ?? author.nombreUsuario;
     return Row(
       children: [
         CircleAvatar(
           backgroundColor: Theme.of(context).colorScheme.onSecondary,
           radius: 18,
           child: Text(
-            author.name.isNotEmpty ? author.name[0].toUpperCase() : '?',
+            authorName.isNotEmpty ? authorName[0].toUpperCase() : '?',
             style: const TextStyle(color: Colors.white),
           ),
         ),
         const SizedBox(width: 10),
-        Text(
-          "agregada por ${author.name}",
-          style: const TextStyle(fontSize: 15),
-        ),
+        Text("agregada por @$authorName", style: const TextStyle(fontSize: 15)),
       ],
     );
   }

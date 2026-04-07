@@ -163,12 +163,15 @@ class _MembersSection extends StatelessWidget {
           spacing: 8,
           runSpacing: 8,
           children: [
-            _MemberChip(name: owner.name, isOwner: true),
+            _MemberChip(
+              name: owner.alias ?? owner.nombreUsuario,
+              isOwner: true,
+            ),
             ...members
                 .where((m) => m.id != owner.id)
                 .map(
                   (m) => _MemberChip(
-                    name: m.name,
+                    name: m.alias ?? m.nombreUsuario,
                     isOwner: false,
                     onRemove: () => _showRemoveMemberDialog(context, m),
                   ),
@@ -209,7 +212,7 @@ class _MembersSection extends StatelessWidget {
                 Navigator.pop(dialogContext);
               }
             },
-              child: const Text('Agregar'),
+            child: const Text('Agregar'),
           ),
         ],
       ),
@@ -217,11 +220,14 @@ class _MembersSection extends StatelessWidget {
   }
 
   void _showRemoveMemberDialog(BuildContext context, dynamic member) {
+    final memberName = member.alias ?? member.nombreUsuario;
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Eliminar miembro'),
-        content: Text('¿Estás seguro de que deseas eliminar a ${member.name} del grupo?'),
+        content: Text(
+          '¿Estás seguro de que deseas eliminar a $memberName del grupo?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),

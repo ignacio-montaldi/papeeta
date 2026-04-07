@@ -13,19 +13,31 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       '/login',
       data: {'email': email, 'password': password},
     );
+    if (response.data['ok'] == false) {
+      throw Exception(response.data['body'] ?? 'Error en el login');
+    }
     return AuthResponseDto.fromJson(response.data);
   }
 
   @override
   Future<AuthResponseDto> register(
-    String name,
+    String alias,
+    String nombreUsuario,
     String email,
     String password,
   ) async {
     final response = await dio.post(
       '/login/new',
-      data: {'nombre': name, 'email': email, 'password': password},
+      data: {
+        'alias': alias.isNotEmpty ? alias : null,
+        'nombre_usuario': nombreUsuario,
+        'email': email,
+        'password': password,
+      },
     );
+    if (response.data['ok'] == false) {
+      throw Exception(response.data['msg'] ?? response.data['body'] ?? 'Error en el registro');
+    }
     return AuthResponseDto.fromJson(response.data);
   }
 

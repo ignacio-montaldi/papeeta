@@ -38,7 +38,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(Authenticated(user));
     } catch (e) {
       emit(const AuthError('No se pudo iniciar sesión. Verificá tus datos.'));
-      // Emit unauthenticated to reset state after showing error
       emit(Unauthenticated());
     }
   }
@@ -50,14 +49,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     try {
       final user = await repository.register(
-        event.name,
+        event.alias,
+        event.nombreUsuario,
         event.email,
         event.password,
       );
       emit(Authenticated(user));
     } catch (e) {
       emit(const AuthError('Error en el registro. Verificá tus datos.'));
-      // Emit unauthenticated to reset state after showing error
       emit(Unauthenticated());
     }
   }

@@ -49,7 +49,8 @@ class _Form extends StatefulWidget {
 }
 
 class _FormState extends State<_Form> {
-  final nameCtrl = TextEditingController();
+  final nombreUsuarioCtrl = TextEditingController();
+  final aliasCtrl = TextEditingController();
   final emailCtrl = TextEditingController();
   final passwordCtrl = TextEditingController();
 
@@ -70,8 +71,14 @@ class _FormState extends State<_Form> {
           children: [
             CustomInput(
               icon: Icons.person_2_outlined,
-              placeholder: 'Nombre',
-              textController: nameCtrl,
+              placeholder: 'Alias (opcional)',
+              textController: aliasCtrl,
+            ),
+            const SizedBox(height: 20),
+            CustomInput(
+              icon: Icons.alternate_email,
+              placeholder: 'Nombre de usuario',
+              textController: nombreUsuarioCtrl,
             ),
             const SizedBox(height: 20),
             CustomInput(
@@ -91,7 +98,6 @@ class _FormState extends State<_Form> {
             BlocBuilder<AuthBloc, AuthState>(
               builder: (context, state) {
                 final isAutenticando = state is AuthLoading;
-
                 return ButtonComponent(
                   text: "Crear cuenta",
                   onPressed: isAutenticando
@@ -99,7 +105,8 @@ class _FormState extends State<_Form> {
                       : () {
                           context.read<AuthBloc>().add(
                             RegisterRequested(
-                              nameCtrl.text.trim(),
+                              aliasCtrl.text.trim(),
+                              nombreUsuarioCtrl.text.trim(),
                               emailCtrl.text.trim(),
                               passwordCtrl.text.trim(),
                             ),
