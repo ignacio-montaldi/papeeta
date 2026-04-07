@@ -170,9 +170,7 @@ class _MembersSection extends StatelessWidget {
                   (m) => _MemberChip(
                     name: m.name,
                     isOwner: false,
-                    onRemove: () => context.read<GroupsBloc>().add(
-                      RemoveMemberFromGroup(groupId: groupId, userId: m.id),
-                    ),
+                    onRemove: () => _showRemoveMemberDialog(context, m),
                   ),
                 ),
           ],
@@ -211,7 +209,36 @@ class _MembersSection extends StatelessWidget {
                 Navigator.pop(dialogContext);
               }
             },
-            child: const Text('Agregar'),
+              child: const Text('Agregar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRemoveMemberDialog(BuildContext context, dynamic member) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Eliminar miembro'),
+        content: Text('¿Estás seguro de que deseas eliminar a ${member.name} del grupo?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              context.read<GroupsBloc>().add(
+                RemoveMemberFromGroup(groupId: groupId, userId: member.id),
+              );
+              Navigator.pop(dialogContext);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Eliminar'),
           ),
         ],
       ),
