@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:papeeta/features/groups/data/models/recipe_share_group_dto.dart';
+import 'package:papeeta/features/recipes/data/models/recipe_response_dto.dart';
 
 abstract class GroupsRemoteDataSource {
   Future<List<RecipeShareGroupDto>> getMyGroups();
@@ -8,6 +9,7 @@ abstract class GroupsRemoteDataSource {
   Future<void> addMember(int groupId, String email);
   Future<void> removeMember(int groupId, String userId);
   Future<void> shareRecipe(int groupId, int recipeId);
+  Future<List<RecipeResponseDto>> getUserRecipes();
 }
 
 class GroupsRemoteDataSourceImpl implements GroupsRemoteDataSource {
@@ -48,5 +50,13 @@ class GroupsRemoteDataSourceImpl implements GroupsRemoteDataSource {
   @override
   Future<void> shareRecipe(int groupId, int recipeId) async {
     await dio.post('/groups/$groupId/recipes/', data: {'recipe_id': recipeId});
+  }
+
+  @override
+  Future<List<RecipeResponseDto>> getUserRecipes() async {
+    final res = await dio.get('/recipes/my-recipes/');
+    return (res.data['recipes'] as List)
+        .map((e) => RecipeResponseDto.fromJson(e))
+        .toList();
   }
 }

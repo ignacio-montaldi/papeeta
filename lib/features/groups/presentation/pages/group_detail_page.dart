@@ -5,6 +5,7 @@ import 'package:papeeta/core/domain/entities/recipe_share_group.dart';
 import 'package:papeeta/features/groups/presentation/bloc/groups_bloc.dart';
 import 'package:papeeta/features/groups/presentation/bloc/groups_event.dart';
 import 'package:papeeta/features/groups/presentation/bloc/groups_state.dart';
+import 'package:papeeta/features/recipes/domain/entities/recipe.dart';
 import 'package:papeeta/features/recipes/domain/entities/recipe_image.dart';
 import 'package:papeeta/widgets/widgets.dart';
 
@@ -65,7 +66,7 @@ class _GroupDetailContent extends StatelessWidget {
             groupId: group.id ?? 0,
           ),
           const SizedBox(height: 24),
-          _RecipesSection(recipes: group.recipes),
+          _RecipesSection(recipes: group.recipes, groupId: group.id ?? 0),
         ],
       ),
     );
@@ -163,15 +164,17 @@ class _MembersSection extends StatelessWidget {
           runSpacing: 8,
           children: [
             _MemberChip(name: owner.name, isOwner: true),
-            ...members.where((m) => m.id != owner.id).map(
-              (m) => _MemberChip(
-                name: m.name,
-                isOwner: false,
-                onRemove: () => context.read<GroupsBloc>().add(
-                  RemoveMemberFromGroup(groupId: groupId, userId: m.id),
+            ...members
+                .where((m) => m.id != owner.id)
+                .map(
+                  (m) => _MemberChip(
+                    name: m.name,
+                    isOwner: false,
+                    onRemove: () => context.read<GroupsBloc>().add(
+                      RemoveMemberFromGroup(groupId: groupId, userId: m.id),
+                    ),
+                  ),
                 ),
-              ),
-            ),
           ],
         ),
       ],
@@ -244,17 +247,28 @@ class _MemberChip extends StatelessWidget {
 
 class _RecipesSection extends StatelessWidget {
   final List<dynamic> recipes;
+  final int groupId;
 
-  const _RecipesSection({required this.recipes});
+  const _RecipesSection({required this.recipes, required this.groupId});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Recetas Compartidas',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Recetas Compartidas',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+            ),
+            TextButton.icon(
+              onPressed: () => _showAddRecipeSheet(context),
+              icon: const Icon(Icons.add, size: 20),
+              label: const Text('Agregar'),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         if (recipes.isEmpty)
@@ -284,33 +298,261 @@ class _RecipesSection extends StatelessWidget {
             itemCount: recipes.length,
             itemBuilder: (context, index) {
               final recipe = recipes[index];
-              return ListTile(
-                leading: recipe.images.isNotEmpty
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: MyImageWidget(
-                          image: RecipeImage(url: recipe.images.first.url),
-                          width: 56,
-                          height: 56,
-                          fit: BoxFit.cover,
-                        ),
-                      )
-                    : Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.restaurant),
-                      ),
-                title: Text(recipe.title),
-                subtitle: Text(recipe.subtitle ?? ''),
+              final imageUrl = recipe.images.isNotEmpty
+                  ? recipe.images.first.url
+                  : '';
+              return GestureDetector(
                 onTap: () => context.push('/recipe/${recipe.id}'),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 15),
+                  child: Container(
+                    height: 260,
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(255, 240, 240, 240),
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    padding: const EdgeInsets.all(15),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(15),
+                            child: recipe.images.isNotEmpty
+                                ? MyImageWidget(
+                                    image: RecipeImage(url: imageUrl),
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Container(
+                                    color: Colors.grey[300],
+                                    child: const Icon(
+                                      Icons.restaurant,
+                                      size: 48,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        Text(
+                          recipe.categories
+                              .map((category) => category.name)
+                              .toList()
+                              .join(' | '),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xff999999),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Text(
+                          recipe.title,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               );
             },
           ),
       ],
+    );
+  }
+
+  void _showAddRecipeSheet(BuildContext context) {
+    context.read<GroupsBloc>().add(LoadUserRecipes());
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (dialogContext) => BlocProvider.value(
+        value: context.read<GroupsBloc>(),
+        child: _RecipeSelectorSheet(
+          groupId: groupId,
+          existingRecipeIds: recipes.map((r) => r.id as int).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecipeSelectorSheet extends StatefulWidget {
+  final int groupId;
+  final List<int> existingRecipeIds;
+
+  const _RecipeSelectorSheet({
+    required this.groupId,
+    required this.existingRecipeIds,
+  });
+
+  @override
+  State<_RecipeSelectorSheet> createState() => _RecipeSelectorSheetState();
+}
+
+class _RecipeSelectorSheetState extends State<_RecipeSelectorSheet> {
+  String _searchQuery = '';
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<GroupsBloc, GroupsState>(
+      builder: (context, state) {
+        List<Recipe> allRecipes = [];
+        if (state is UserRecipesLoaded) {
+          allRecipes = state.recipes;
+        }
+
+        final filteredRecipes = allRecipes.where((recipe) {
+          final isNotInGroup = !widget.existingRecipeIds.contains(recipe.id);
+          final matchesSearch =
+              _searchQuery.isEmpty ||
+              recipe.title.toLowerCase().contains(_searchQuery.toLowerCase());
+          return isNotInGroup && matchesSearch;
+        }).toList();
+
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 1,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 12),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Agregar Receta',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          onChanged: (value) =>
+                              setState(() => _searchQuery = value),
+                          decoration: InputDecoration(
+                            hintText: 'Buscar recetas...',
+                            prefixIcon: const Icon(Icons.search),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey[100],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: state is UserRecipesLoaded
+                        ? filteredRecipes.isEmpty
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.check_circle,
+                                        size: 48,
+                                        color: Colors.green[400],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Todas tus recetas ya están en el grupo',
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : ListView.builder(
+                                  controller: scrollController,
+                                  itemCount: filteredRecipes.length,
+                                  itemBuilder: (context, index) {
+                                    final recipe = filteredRecipes[index];
+                                    return ListTile(
+                                      leading: recipe.images.isNotEmpty
+                                          ? ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              child: MyImageWidget(
+                                                image: RecipeImage(
+                                                  url: recipe.images.first.url,
+                                                ),
+                                                width: 56,
+                                                height: 56,
+                                                fit: BoxFit.cover,
+                                              ),
+                                            )
+                                          : Container(
+                                              width: 56,
+                                              height: 56,
+                                              decoration: BoxDecoration(
+                                                color: Colors.grey[200],
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: const Icon(
+                                                Icons.restaurant,
+                                              ),
+                                            ),
+                                      title: Text(recipe.title),
+                                      subtitle: recipe.subtitle.isNotEmpty
+                                          ? Text(
+                                              recipe.subtitle,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            )
+                                          : null,
+                                      onTap: () {
+                                        context.read<GroupsBloc>().add(
+                                          ShareRecipeToGroup(
+                                            groupId: widget.groupId,
+                                            recipeId: recipe.id,
+                                          ),
+                                        );
+                                        Navigator.pop(context);
+                                      },
+                                    );
+                                  },
+                                )
+                        : const Center(child: CircularProgressIndicator()),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

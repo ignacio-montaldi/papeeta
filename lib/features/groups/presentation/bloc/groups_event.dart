@@ -58,3 +58,14 @@ class ShareRecipeToGroup extends GroupsEvent {
   @override
   List<Object?> get props => [groupId, recipeId];
 }
+
+class LoadUserRecipes extends GroupsEvent {}
+
+class RecipeShared extends GroupsEvent {
+  final int groupId;
+
+  const RecipeShared(this.groupId);
+
+  @override
+  List<Object?> get props => [groupId];
+}

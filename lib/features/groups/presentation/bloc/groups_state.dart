@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:papeeta/core/domain/entities/recipe_share_group.dart';
+import 'package:papeeta/features/recipes/domain/entities/recipe.dart';
 
 abstract class GroupsState extends Equatable {
   const GroupsState();
@@ -46,4 +47,13 @@ class GroupCreated extends GroupsState {
 
   @override
   List<Object?> get props => [group];
+}
+
+class UserRecipesLoaded extends GroupsState {
+  final List<Recipe> recipes;
+
+  const UserRecipesLoaded(this.recipes);
+
+  @override
+  List<Object?> get props => [recipes];
 }
