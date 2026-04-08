@@ -9,5 +9,6 @@ abstract class GroupsRepository {
   Future<void> addMember(int groupId, String nombreUsuario);
   Future<void> removeMember(int groupId, String userId);
   Future<void> shareRecipe(int groupId, int recipeId);
+  Future<void> removeRecipe(int groupId, int recipeId);
   Future<List<Recipe>> getUserRecipes();
 }

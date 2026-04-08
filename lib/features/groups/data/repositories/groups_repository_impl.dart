@@ -45,6 +45,11 @@ class GroupsRepositoryImpl implements GroupsRepository {
   }
 
   @override
+  Future<void> removeRecipe(int groupId, int recipeId) async {
+    await remoteDataSource.removeRecipe(groupId, recipeId);
+  }
+
+  @override
   Future<List<Recipe>> getUserRecipes() async {
     final dtos = await remoteDataSource.getUserRecipes();
     return dtos.map((e) => RecipeMapper.toEntity(e)).toList();

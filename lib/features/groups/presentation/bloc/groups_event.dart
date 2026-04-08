@@ -69,3 +69,13 @@ class RecipeShared extends GroupsEvent {
   @override
   List<Object?> get props => [groupId];
 }
+
+class RemoveRecipeFromGroup extends GroupsEvent {
+  final int groupId;
+  final int recipeId;
+
+  const RemoveRecipeFromGroup({required this.groupId, required this.recipeId});
+
+  @override
+  List<Object?> get props => [groupId, recipeId];
+}

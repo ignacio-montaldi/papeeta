@@ -93,7 +93,18 @@ class _GroupDetailContent extends StatelessWidget {
             ownerId: group.owner?.id ?? '',
           ),
           const SizedBox(height: 8),
-          _RecipesSection(recipes: group.recipes, groupId: group.id ?? 0),
+          _RecipesSection(
+            recipes: group.recipes,
+            groupId: group.id ?? 0,
+            onRemoveRecipe: (recipeId) {
+              context.read<GroupsBloc>().add(
+                RemoveRecipeFromGroup(
+                  groupId: group.id ?? 0,
+                  recipeId: recipeId,
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -206,7 +217,9 @@ class _MembersSection extends StatelessWidget {
                   (m) => _MemberChip(
                     name: m.alias ?? m.nombreUsuario,
                     isOwner: false,
-                    onRemove: _isOwner ? () => _showRemoveMemberDialog(context, m) : null,
+                    onRemove: _isOwner
+                        ? () => _showRemoveMemberDialog(context, m)
+                        : null,
                   ),
                 ),
           ],
@@ -311,11 +324,64 @@ class _MemberChip extends StatelessWidget {
   }
 }
 
-class _RecipesSection extends StatelessWidget {
+class _RecipesSection extends StatefulWidget {
   final List<dynamic> recipes;
   final int groupId;
+  final Function(int recipeId)? onRemoveRecipe;
 
-  const _RecipesSection({required this.recipes, required this.groupId});
+  const _RecipesSection({
+    required this.recipes,
+    required this.groupId,
+    this.onRemoveRecipe,
+  });
+
+  @override
+  State<_RecipesSection> createState() => _RecipesSectionState();
+}
+
+class _RecipesSectionState extends State<_RecipesSection> {
+  final Map<int, double> _offsets = {};
+  final _deleteButtonWidth = 80.0;
+  final _dismissThreshold = 0.5;
+
+  double _getOffset(int recipeId) => _offsets[recipeId] ?? 0;
+
+  void _updateOffset(int recipeId, double offset) {
+    setState(() {
+      _offsets[recipeId] = offset.clamp(-_deleteButtonWidth, 0);
+    });
+  }
+
+  void _resetOffset(int recipeId) {
+    setState(() {
+      _offsets[recipeId] = 0;
+    });
+  }
+
+  Future<void> _handleDismiss(int recipeId, String title) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Eliminar receta'),
+        content: Text('¿Estás seguro de que deseas eliminar "$title" del grupo?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      widget.onRemoveRecipe?.call(recipeId);
+    }
+    _resetOffset(recipeId);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -337,7 +403,7 @@ class _RecipesSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        if (recipes.isEmpty)
+        if (widget.recipes.isEmpty)
           Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -361,74 +427,122 @@ class _RecipesSection extends StatelessWidget {
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: recipes.length,
+            itemCount: widget.recipes.length,
             itemBuilder: (context, index) {
-              final recipe = recipes[index];
+              final recipe = widget.recipes[index];
+              final recipeId = recipe.id as int;
               final imageUrl = recipe.images.isNotEmpty
                   ? recipe.images.first.url
                   : '';
-              return GestureDetector(
-                onTap: () => context.push('/recipe/${recipe.id}'),
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 15),
-                  child: Container(
-                    height: 260,
-                    decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 240, 240, 240),
-                      borderRadius: BorderRadius.circular(30),
+              final offset = _getOffset(recipeId);
+
+              return SizedBox(
+                height: 275,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Container(
+                        alignment: Alignment.centerRight,
+                        margin: const EdgeInsets.only(bottom: 15),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: GestureDetector(
+                          onTap: () => _handleDismiss(recipeId, recipe.title),
+                          child: Container(
+                            width: _deleteButtonWidth,
+                            alignment: Alignment.center,
+                            child: const Icon(Icons.delete, color: Colors.white, size: 28),
+                          ),
+                        ),
+                      ),
                     ),
-                    padding: const EdgeInsets.all(15),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(15),
-                            child: recipe.images.isNotEmpty
-                                ? MyImageWidget(
-                                    image: RecipeImage(url: imageUrl),
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Container(
-                                    color: Colors.grey[300],
-                                    child: const Icon(
-                                      Icons.restaurant,
-                                      size: 48,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
+                    Transform.translate(
+                      offset: Offset(offset, 0),
+                      child: GestureDetector(
+                        onTap: () => context.push('/recipe/${recipe.id}'),
+                        onHorizontalDragUpdate: (details) {
+                          final newOffset = offset + details.delta.dx;
+                          if (newOffset <= 0) {
+                            _updateOffset(recipeId, newOffset);
+                          }
+                        },
+                        onHorizontalDragEnd: (details) {
+                          final velocity = details.velocity.pixelsPerSecond.dx;
+                          final screenWidth = MediaQuery.of(context).size.width;
+                          final progress = (-offset / screenWidth).clamp(0.0, 1.0);
+
+                          if (progress >= _dismissThreshold || velocity < -500) {
+                            _handleDismiss(recipeId, recipe.title);
+                          } else if (-offset >= _deleteButtonWidth) {
+                            // Keep it open past delete button
+                            _updateOffset(recipeId, -_deleteButtonWidth);
+                          } else {
+                            _resetOffset(recipeId);
+                          }
+                        },
+                        child: Container(
+                          height: 260,
+                          decoration: BoxDecoration(
+                            color: const Color.fromARGB(255, 240, 240, 240),
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          padding: const EdgeInsets.all(15),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(15),
+                                  child: recipe.images.isNotEmpty
+                                      ? MyImageWidget(
+                                          image: RecipeImage(url: imageUrl),
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : Container(
+                                          color: Colors.grey[300],
+                                          child: const Icon(
+                                            Icons.restaurant,
+                                            size: 48,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                              Text(
+                                recipe.categories
+                                    .map((category) => category.name)
+                                    .toList()
+                                    .join(' | '),
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xff999999),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                recipe.title,
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        Text(
-                          recipe.categories
-                              .map((category) => category.name)
-                              .toList()
-                              .join(' | '),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xff999999),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        Text(
-                          recipe.title,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               );
             },
@@ -445,8 +559,8 @@ class _RecipesSection extends StatelessWidget {
       builder: (dialogContext) => BlocProvider.value(
         value: context.read<GroupsBloc>(),
         child: _RecipeSelectorSheet(
-          groupId: groupId,
-          existingRecipeIds: recipes.map((r) => r.id as int).toList(),
+          groupId: widget.groupId,
+          existingRecipeIds: widget.recipes.map((r) => r.id as int).toList(),
         ),
       ),
     );
