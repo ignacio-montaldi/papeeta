@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:papeeta/core/domain/entities/recipe_share_group.dart';
+import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:papeeta/features/groups/presentation/bloc/groups_bloc.dart';
 import 'package:papeeta/features/groups/presentation/bloc/groups_event.dart';
 import 'package:papeeta/features/groups/presentation/bloc/groups_state.dart';
@@ -53,6 +54,9 @@ class _GroupDetailContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    final currentUserId = authState is Authenticated ? authState.user.id : '';
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -63,6 +67,8 @@ class _GroupDetailContent extends StatelessWidget {
             members: group.members,
             owner: group.owner,
             groupId: group.id ?? 0,
+            currentUserId: currentUserId,
+            ownerId: group.owner?.id ?? '',
           ),
           const SizedBox(height: 8),
           _RecipesSection(recipes: group.recipes, groupId: group.id ?? 0),
@@ -131,12 +137,18 @@ class _MembersSection extends StatelessWidget {
   final List<dynamic> members;
   final dynamic owner;
   final int groupId;
+  final String currentUserId;
+  final String ownerId;
 
   const _MembersSection({
     required this.members,
     required this.owner,
     required this.groupId,
+    required this.currentUserId,
+    required this.ownerId,
   });
+
+  bool get _isOwner => currentUserId == ownerId;
 
   @override
   Widget build(BuildContext context) {
@@ -150,11 +162,12 @@ class _MembersSection extends StatelessWidget {
               'Miembros',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
-            TextButton.icon(
-              onPressed: () => _showAddMemberDialog(context),
-              icon: const Icon(Icons.person_add, size: 20),
-              label: const Text('Agregar'),
-            ),
+            if (_isOwner)
+              TextButton.icon(
+                onPressed: () => _showAddMemberDialog(context),
+                icon: const Icon(Icons.person_add, size: 20),
+                label: const Text('Agregar'),
+              ),
           ],
         ),
         const SizedBox(height: 8),
@@ -171,7 +184,7 @@ class _MembersSection extends StatelessWidget {
                   (m) => _MemberChip(
                     name: m.alias ?? m.nombreUsuario,
                     isOwner: false,
-                    onRemove: () => _showRemoveMemberDialog(context, m),
+                    onRemove: _isOwner ? () => _showRemoveMemberDialog(context, m) : null,
                   ),
                 ),
           ],
