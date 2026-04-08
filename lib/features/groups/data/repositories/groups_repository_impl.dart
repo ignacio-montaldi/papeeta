@@ -50,6 +50,12 @@ class GroupsRepositoryImpl implements GroupsRepository {
   }
 
   @override
+  Future<RecipeShareGroup> updateGroupImage(int groupId, String imagePath) async {
+    final dto = await remoteDataSource.updateGroupImage(groupId, imagePath);
+    return RecipeShareGroupMapper.toEntity(dto);
+  }
+
+  @override
   Future<List<Recipe>> getUserRecipes() async {
     final dtos = await remoteDataSource.getUserRecipes();
     return dtos.map((e) => RecipeMapper.toEntity(e)).toList();

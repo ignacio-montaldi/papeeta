@@ -21,12 +21,11 @@ class LoadGroupDetail extends GroupsEvent {
 class CreateGroup extends GroupsEvent {
   final String name;
   final String? description;
-  final String? imageUrl;
 
-  const CreateGroup({required this.name, this.description, this.imageUrl});
+  const CreateGroup({required this.name, this.description});
 
   @override
-  List<Object?> get props => [name, description, imageUrl];
+  List<Object?> get props => [name, description];
 }
 
 class AddMemberToGroup extends GroupsEvent {
@@ -78,4 +77,14 @@ class RemoveRecipeFromGroup extends GroupsEvent {
 
   @override
   List<Object?> get props => [groupId, recipeId];
+}
+
+class UpdateGroupImage extends GroupsEvent {
+  final int groupId;
+  final String imagePath;
+
+  const UpdateGroupImage({required this.groupId, required this.imagePath});
+
+  @override
+  List<Object?> get props => [groupId, imagePath];
 }

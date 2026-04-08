@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:papeeta/features/recipes/domain/entities/recipe_image.dart';
 import 'package:papeeta/features/recipes/domain/entities/recipe_image_upload.dart';
+import 'package:papeeta/features/groups/domain/entities/group_image.dart';
 
 class MyImageWidget extends StatelessWidget {
   final dynamic image;
@@ -24,7 +25,8 @@ class MyImageWidget extends StatelessWidget {
   });
 
   bool get isLocal => image is RecipeImageUpload;
-  bool get isRemote => image is RecipeImage;
+  bool get isRemoteRecipeImage => image is RecipeImage;
+  bool get isRemoteGroupImage => image is GroupImage;
 
   @override
   Widget build(BuildContext context) {
@@ -38,10 +40,29 @@ class MyImageWidget extends StatelessWidget {
         width: width,
         height: height,
       );
-    } else if (isRemote) {
+    } else if (isRemoteRecipeImage) {
       final recipeImage = image as RecipeImage;
       imageWidget = CachedNetworkImage(
         imageUrl: recipeImage.url,
+        fit: fit,
+        width: width,
+        height: height,
+        placeholder: (context, url) =>
+            placeholder ??
+            Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+        errorWidget: (context, url, error) =>
+            errorWidget ?? const Icon(Icons.broken_image, color: Colors.grey),
+      );
+    } else if (isRemoteGroupImage) {
+      final groupImage = image as GroupImage;
+      imageWidget = CachedNetworkImage(
+        imageUrl: groupImage.url,
         fit: fit,
         width: width,
         height: height,

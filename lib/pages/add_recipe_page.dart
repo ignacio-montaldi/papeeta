@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:papeeta/features/ingredients/presentation/bloc/ingredient_bloc.dart';
 import 'package:papeeta/features/recipes/presentation/bloc/recipe_form/recipe_form_cubit.dart';
 import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
@@ -12,6 +11,7 @@ import 'package:papeeta/features/recipes/domain/entities/ingredient.dart';
 import 'package:papeeta/features/recipes/domain/entities/ingredient_unit.dart';
 import 'package:papeeta/features/recipes/domain/entities/preparation_step.dart';
 import 'package:papeeta/widgets/category_selector_sheet.dart';
+import 'package:papeeta/widgets/image_source_sheet.dart';
 
 class AddRecipePage extends StatefulWidget {
   const AddRecipePage({super.key});
@@ -167,8 +167,12 @@ class _AddRecipePageState extends State<AddRecipePage> {
                                               ),
                                             ),
                                           OutlinedButton.icon(
-                                            onPressed: () =>
-                                                _showImageSourceSheet(context),
+                                            onPressed: () => ImageSourceSheet.show(
+                                              context,
+                                              onImageSourceSelected: (source) {
+                                                context.read<RecipeFormCubit>().pickImage(source);
+                                              },
+                                            ),
                                             icon: const Icon(
                                               Icons.add_a_photo_outlined,
                                             ),
@@ -260,53 +264,6 @@ class _AddRecipePageState extends State<AddRecipePage> {
           );
         },
       ),
-    );
-  }
-
-  void _showImageSourceSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade400,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              const SizedBox(height: 20),
-              ListTile(
-                leading: const Icon(Icons.photo_camera_outlined),
-                title: const Text('Tomar foto'),
-                onTap: () {
-                  context.pop();
-                  context.read<RecipeFormCubit>().pickImage(ImageSource.camera);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library_outlined),
-                title: const Text('Elegir de la galería'),
-                onTap: () {
-                  context.pop();
-                  context.read<RecipeFormCubit>().pickImage(
-                    ImageSource.gallery,
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
-        );
-      },
     );
   }
 }

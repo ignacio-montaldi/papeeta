@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:papeeta/core/domain/entities/recipe_share_group.dart';
-import 'package:papeeta/features/recipes/domain/entities/recipe_image.dart';
 import 'package:papeeta/widgets/widgets.dart';
 
 class GroupCard extends StatelessWidget {
@@ -28,13 +27,13 @@ class GroupCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (group.imageUrl != null && group.imageUrl!.isNotEmpty)
+            if (group.images.isNotEmpty)
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(16),
                 ),
                 child: MyImageWidget(
-                  image: RecipeImage(url: group.imageUrl!),
+                  image: group.images.first,
                   height: 120,
                   width: double.infinity,
                   fit: BoxFit.cover,

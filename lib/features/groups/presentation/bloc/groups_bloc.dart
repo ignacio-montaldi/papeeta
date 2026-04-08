@@ -17,6 +17,7 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> {
     on<LoadUserRecipes>(_onLoadUserRecipes);
     on<RecipeShared>(_onRecipeShared);
     on<RemoveRecipeFromGroup>(_onRemoveRecipe);
+    on<UpdateGroupImage>(_onUpdateGroupImage);
   }
 
   Future<void> _onLoadMyGroups(
@@ -54,7 +55,6 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> {
       final dto = CreateRecipeShareGroupDto(
         name: event.name,
         description: event.description,
-        imageUrl: event.imageUrl,
       );
       final group = await repository.createGroup(dto);
       emit(GroupCreated(group));
@@ -125,6 +125,18 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> {
     try {
       await repository.removeRecipe(event.groupId, event.recipeId);
       add(LoadGroupDetail(event.groupId));
+    } catch (e) {
+      emit(GroupsError(e.toString()));
+    }
+  }
+
+  Future<void> _onUpdateGroupImage(
+    UpdateGroupImage event,
+    Emitter<GroupsState> emit,
+  ) async {
+    try {
+      final group = await repository.updateGroupImage(event.groupId, event.imagePath);
+      emit(GroupDetailLoaded(group));
     } catch (e) {
       emit(GroupsError(e.toString()));
     }

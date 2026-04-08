@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:papeeta/core/domain/entities/recipe_share_group.dart';
 import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:papeeta/features/groups/presentation/bloc/groups_bloc.dart';
@@ -69,10 +70,41 @@ class _GroupDetailPageState extends State<GroupDetailPage> {
   }
 }
 
-class _GroupDetailContent extends StatelessWidget {
+class _GroupDetailContent extends StatefulWidget {
   final RecipeShareGroup group;
 
   const _GroupDetailContent({required this.group});
+
+  @override
+  State<_GroupDetailContent> createState() => _GroupDetailContentState();
+}
+
+class _GroupDetailContentState extends State<_GroupDetailContent> {
+  final _imagePicker = ImagePicker();
+
+  Future<void> _showImageSourceSheet(BuildContext context) async {
+    await ImageSourceSheet.show(
+      context,
+      onImageSourceSelected: (source) async {
+        try {
+          final pickedFile = await _imagePicker.pickImage(
+            source: source,
+            imageQuality: 80,
+          );
+          if (pickedFile != null && context.mounted) {
+            context.read<GroupsBloc>().add(
+              UpdateGroupImage(
+                groupId: widget.group.id ?? 0,
+                imagePath: pickedFile.path,
+              ),
+            );
+          }
+        } catch (e) {
+          debugPrint('Error picking image: $e');
+        }
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,22 +116,27 @@ class _GroupDetailContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _HeaderSection(group: group),
-          _MembersSection(
-            members: group.members,
-            owner: group.owner,
-            groupId: group.id ?? 0,
+          _HeaderSection(
+            group: widget.group,
             currentUserId: currentUserId,
-            ownerId: group.owner?.id ?? '',
+            isOwner: currentUserId == (widget.group.owner?.id ?? ''),
+            onEditImage: () => _showImageSourceSheet(context),
+          ),
+          _MembersSection(
+            members: widget.group.members,
+            owner: widget.group.owner,
+            groupId: widget.group.id ?? 0,
+            currentUserId: currentUserId,
+            ownerId: widget.group.owner?.id ?? '',
           ),
           const SizedBox(height: 8),
           _RecipesSection(
-            recipes: group.recipes,
-            groupId: group.id ?? 0,
+            recipes: widget.group.recipes,
+            groupId: widget.group.id ?? 0,
             onRemoveRecipe: (recipeId) {
               context.read<GroupsBloc>().add(
                 RemoveRecipeFromGroup(
-                  groupId: group.id ?? 0,
+                  groupId: widget.group.id ?? 0,
                   recipeId: recipeId,
                 ),
               );
@@ -113,42 +150,76 @@ class _GroupDetailContent extends StatelessWidget {
 
 class _HeaderSection extends StatelessWidget {
   final RecipeShareGroup group;
+  final String currentUserId;
+  final bool isOwner;
+  final VoidCallback onEditImage;
 
-  const _HeaderSection({required this.group});
+  const _HeaderSection({
+    required this.group,
+    required this.currentUserId,
+    required this.isOwner,
+    required this.onEditImage,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final hasImage = group.images.isNotEmpty;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (group.imageUrl != null && group.imageUrl!.isNotEmpty)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: MyImageWidget(
-              image: RecipeImage(url: group.imageUrl!),
-              height: 180,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-          )
-        else
-          Container(
-            height: 120,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Theme.of(
-                context,
-              ).colorScheme.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Center(
-              child: Icon(
-                Icons.group,
-                size: 60,
-                color: Theme.of(context).colorScheme.primary,
+        Stack(
+          children: [
+            if (hasImage)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: MyImageWidget(
+                  image: group.images.first,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              )
+            else
+              Container(
+                height: 120,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.group,
+                    size: 60,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
               ),
-            ),
-          ),
+            if (isOwner)
+              Positioned(
+                bottom: 8,
+                right: 8,
+                child: GestureDetector(
+                  onTap: onEditImage,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Icon(
+                      Icons.edit,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
         const SizedBox(height: 16),
         Text(
           group.name,
@@ -363,7 +434,9 @@ class _RecipesSectionState extends State<_RecipesSection> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Eliminar receta'),
-        content: Text('¿Estás seguro de que deseas eliminar "$title" del grupo?'),
+        content: Text(
+          '¿Estás seguro de que deseas eliminar "$title" del grupo?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -453,7 +526,11 @@ class _RecipesSectionState extends State<_RecipesSection> {
                           child: Container(
                             width: _deleteButtonWidth,
                             alignment: Alignment.center,
-                            child: const Icon(Icons.delete, color: Colors.white, size: 28),
+                            child: const Icon(
+                              Icons.delete,
+                              color: Colors.white,
+                              size: 28,
+                            ),
                           ),
                         ),
                       ),
@@ -471,9 +548,13 @@ class _RecipesSectionState extends State<_RecipesSection> {
                         onHorizontalDragEnd: (details) {
                           final velocity = details.velocity.pixelsPerSecond.dx;
                           final screenWidth = MediaQuery.of(context).size.width;
-                          final progress = (-offset / screenWidth).clamp(0.0, 1.0);
+                          final progress = (-offset / screenWidth).clamp(
+                            0.0,
+                            1.0,
+                          );
 
-                          if (progress >= _dismissThreshold || velocity < -500) {
+                          if (progress >= _dismissThreshold ||
+                              velocity < -500) {
                             _handleDismiss(recipeId, recipe.title);
                           } else if (-offset >= _deleteButtonWidth) {
                             // Keep it open past delete button

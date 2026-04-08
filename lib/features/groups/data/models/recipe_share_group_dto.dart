@@ -1,24 +1,25 @@
 import 'package:papeeta/features/auth/data/models/user_dto.dart';
+import 'package:papeeta/features/groups/data/models/group_image_dto.dart';
 import 'package:papeeta/features/recipes/data/models/recipe_response_dto.dart';
 
 class RecipeShareGroupDto {
   final int? id;
   final String name;
   final String? description;
-  final String? imageUrl;
   final UserDto? owner;
   final List<UserDto> members;
   final List<RecipeResponseDto> recipes;
+  final List<GroupImageDto> images;
   final String? createdAt;
 
   RecipeShareGroupDto({
     this.id,
     required this.name,
     this.description,
-    this.imageUrl,
     this.owner,
     required this.members,
     required this.recipes,
+    this.images = const [],
     this.createdAt,
   });
 
@@ -27,7 +28,6 @@ class RecipeShareGroupDto {
       id: json['id'],
       name: json['name'] ?? '',
       description: json['description'],
-      imageUrl: json['image_url'],
       owner: json['owner'] != null ? UserDto.fromJson(json['owner']) : null,
       members:
           (json['members'] as List?)
@@ -39,6 +39,10 @@ class RecipeShareGroupDto {
               ?.map((e) => RecipeResponseDto.fromJson(e))
               .toList() ??
           [],
+      images: (json['images'] as List?)
+              ?.map((e) => GroupImageDto.fromJson(e))
+              .toList() ??
+          [],
       createdAt: json['created_at'],
     );
   }
@@ -47,15 +51,13 @@ class RecipeShareGroupDto {
 class CreateRecipeShareGroupDto {
   final String name;
   final String? description;
-  final String? imageUrl;
 
   CreateRecipeShareGroupDto({
     required this.name,
     this.description,
-    this.imageUrl,
   });
 
   Map<String, dynamic> toJson() {
-    return {'name': name, 'description': description, 'image_url': imageUrl};
+    return {'name': name, 'description': description};
   }
 }
