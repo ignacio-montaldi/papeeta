@@ -10,10 +10,17 @@ import 'package:papeeta/features/recipes/domain/entities/recipe.dart';
 import 'package:papeeta/features/recipes/domain/entities/recipe_image.dart';
 import 'package:papeeta/widgets/widgets.dart';
 
-class GroupDetailPage extends StatelessWidget {
+class GroupDetailPage extends StatefulWidget {
   final int groupId;
 
   const GroupDetailPage({super.key, required this.groupId});
+
+  @override
+  State<GroupDetailPage> createState() => _GroupDetailPageState();
+}
+
+class _GroupDetailPageState extends State<GroupDetailPage> {
+  RecipeShareGroup? _lastGroup;
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +33,14 @@ class GroupDetailPage extends StatelessWidget {
           onPressed: () => context.pop(),
         ),
       ),
-      body: BlocBuilder<GroupsBloc, GroupsState>(
+      body: BlocConsumer<GroupsBloc, GroupsState>(
+        listener: (context, state) {
+          if (state is GroupDetailLoaded) {
+            setState(() {
+              _lastGroup = state.group;
+            });
+          }
+        },
         builder: (context, state) {
           if (state is GroupsLoading) {
             return const Center(child: CircularProgressIndicator());
@@ -36,8 +50,16 @@ class GroupDetailPage extends StatelessWidget {
             return _GroupDetailContent(group: state.group);
           }
 
+          if (state is UserRecipesLoaded && _lastGroup != null) {
+            return _GroupDetailContent(group: _lastGroup!);
+          }
+
           if (state is GroupsError) {
             return Center(child: Text(state.message));
+          }
+
+          if (_lastGroup != null) {
+            return _GroupDetailContent(group: _lastGroup!);
           }
 
           return const SizedBox.shrink();
