@@ -6,7 +6,7 @@ abstract class GroupsRemoteDataSource {
   Future<List<RecipeShareGroupDto>> getMyGroups();
   Future<RecipeShareGroupDto> getGroupById(int id);
   Future<RecipeShareGroupDto> createGroup(CreateRecipeShareGroupDto dto);
-  Future<void> addMember(int groupId, String email);
+  Future<void> addMember(int groupId, String nombreUsuario);
   Future<void> removeMember(int groupId, String userId);
   Future<void> shareRecipe(int groupId, int recipeId);
   Future<List<RecipeResponseDto>> getUserRecipes();
@@ -38,8 +38,8 @@ class GroupsRemoteDataSourceImpl implements GroupsRemoteDataSource {
   }
 
   @override
-  Future<void> addMember(int groupId, String email) async {
-    await dio.post('/groups/$groupId/members/', data: {'email': email});
+  Future<void> addMember(int groupId, String nombreUsuario) async {
+    await dio.post('/groups/$groupId/members/', data: {'nombre_usuario': nombreUsuario});
   }
 
   @override

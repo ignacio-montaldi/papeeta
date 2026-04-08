@@ -59,13 +59,12 @@ class _GroupDetailContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _HeaderSection(group: group),
-          const SizedBox(height: 24),
           _MembersSection(
             members: group.members,
             owner: group.owner,
             groupId: group.id ?? 0,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 8),
           _RecipesSection(recipes: group.recipes, groupId: group.id ?? 0),
         ],
       ),
@@ -161,7 +160,6 @@ class _MembersSection extends StatelessWidget {
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
-          runSpacing: 8,
           children: [
             _MemberChip(
               name: owner.alias ?? owner.nombreUsuario,
@@ -191,7 +189,7 @@ class _MembersSection extends StatelessWidget {
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(
-            hintText: 'Ingresa el email del usuario',
+            hintText: 'Ingresa el nombre de usuario',
             border: OutlineInputBorder(),
           ),
         ),
@@ -206,7 +204,7 @@ class _MembersSection extends StatelessWidget {
                 context.read<GroupsBloc>().add(
                   AddMemberToGroup(
                     groupId: groupId,
-                    email: controller.text.trim(),
+                    nombreUsuario: controller.text.trim(),
                   ),
                 );
                 Navigator.pop(dialogContext);

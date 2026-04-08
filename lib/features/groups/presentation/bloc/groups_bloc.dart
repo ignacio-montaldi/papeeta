@@ -67,7 +67,7 @@ class GroupsBloc extends Bloc<GroupsEvent, GroupsState> {
     Emitter<GroupsState> emit,
   ) async {
     try {
-      await repository.addMember(event.groupId, event.email);
+      await repository.addMember(event.groupId, event.nombreUsuario);
       add(LoadGroupDetail(event.groupId));
     } catch (e) {
       emit(GroupsError(e.toString()));

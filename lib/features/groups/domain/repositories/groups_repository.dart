@@ -6,7 +6,7 @@ abstract class GroupsRepository {
   Future<List<RecipeShareGroup>> getMyGroups();
   Future<RecipeShareGroup> getGroupById(int id);
   Future<RecipeShareGroup> createGroup(CreateRecipeShareGroupDto dto);
-  Future<void> addMember(int groupId, String email);
+  Future<void> addMember(int groupId, String nombreUsuario);
   Future<void> removeMember(int groupId, String userId);
   Future<void> shareRecipe(int groupId, int recipeId);
   Future<List<Recipe>> getUserRecipes();

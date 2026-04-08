@@ -30,8 +30,8 @@ class GroupsRepositoryImpl implements GroupsRepository {
   }
 
   @override
-  Future<void> addMember(int groupId, String email) async {
-    await remoteDataSource.addMember(groupId, email);
+  Future<void> addMember(int groupId, String nombreUsuario) async {
+    await remoteDataSource.addMember(groupId, nombreUsuario);
   }
 
   @override

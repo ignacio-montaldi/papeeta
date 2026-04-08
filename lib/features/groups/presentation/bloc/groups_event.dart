@@ -31,12 +31,12 @@ class CreateGroup extends GroupsEvent {
 
 class AddMemberToGroup extends GroupsEvent {
   final int groupId;
-  final String email;
+  final String nombreUsuario;
 
-  const AddMemberToGroup({required this.groupId, required this.email});
+  const AddMemberToGroup({required this.groupId, required this.nombreUsuario});
 
   @override
-  List<Object?> get props => [groupId, email];
+  List<Object?> get props => [groupId, nombreUsuario];
 }
 
 class RemoveMemberFromGroup extends GroupsEvent {
