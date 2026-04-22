@@ -3,6 +3,7 @@ export 'package:papeeta/pages/categories_page.dart';
 export 'package:papeeta/pages/home_page.dart';
 export 'package:papeeta/pages/loading_page.dart';
 export 'package:papeeta/pages/login_page.dart';
+export 'package:papeeta/pages/profile_page.dart';
 export 'package:papeeta/pages/recipe_list_page.dart';
 export 'package:papeeta/pages/recipe_page.dart';
 export 'package:papeeta/pages/register_page.dart';

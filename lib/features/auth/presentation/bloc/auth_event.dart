@@ -4,7 +4,7 @@ abstract class AuthEvent extends Equatable {
   const AuthEvent();
 
   @override
-  List<Object> get props => [];
+  List<Object?> get props => [];
 }
 
 class CheckAuthStatus extends AuthEvent {}
@@ -32,3 +32,22 @@ class RegisterRequested extends AuthEvent {
 }
 
 class LogoutRequested extends AuthEvent {}
+
+class UpdateProfileRequested extends AuthEvent {
+  final String? alias;
+  final String? email;
+  final String? passwordNueva;
+  final String? passwordActual;
+  final dynamic imagen;
+
+  const UpdateProfileRequested({
+    this.alias,
+    this.email,
+    this.passwordNueva,
+    this.passwordActual,
+    this.imagen,
+  });
+
+  @override
+  List<Object?> get props => [alias, email, passwordNueva, passwordActual, imagen];
+}

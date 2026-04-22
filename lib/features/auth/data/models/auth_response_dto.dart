@@ -19,3 +19,23 @@ class AuthResponseDto {
     );
   }
 }
+
+class ProfileResponseDto {
+  final bool ok;
+  final UserDto user;
+  final String? message;
+
+  ProfileResponseDto({
+    required this.ok,
+    required this.user,
+    this.message,
+  });
+
+  factory ProfileResponseDto.fromJson(Map<String, dynamic> json) {
+    return ProfileResponseDto(
+      ok: json["ok"] ?? false,
+      user: UserDto.fromJson(json["usuario"]),
+      message: json["msg"],
+    );
+  }
+}

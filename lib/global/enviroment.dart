@@ -13,9 +13,9 @@ class Enviroment {
   static String baseUrlProd = 'https://allowing-starling-heroic.ngrok-free.app';
 
   //Cambiar estas si se está en prod o en dev
-  static String apiUrl = '$baseUrlProd/api';
-  static String uploadsUrl = baseUrlProd;
+  // static String apiUrl = '$baseUrlProd/api';
+  // static String uploadsUrl = baseUrlProd;
 
-  // static String apiUrl = '$baseUrlDev/api';
-  // static String uploadsUrl = baseUrlDev;
+  static String apiUrl = '$baseUrlDev/api';
+  static String uploadsUrl = baseUrlDev;
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:papeeta/global/enviroment.dart';
 
 class CustomDrawer extends StatelessWidget {
   const CustomDrawer({super.key});
@@ -24,7 +25,9 @@ class CustomDrawer extends StatelessWidget {
                 gradient: LinearGradient(
                   colors: [
                     Theme.of(context).colorScheme.primary,
-                    Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+                    Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.8),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -35,18 +38,39 @@ class CustomDrawer extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.restaurant_menu,
-                          color: Colors.white,
-                          size: 32,
-                        ),
-                      ),
+                      user != null && user.imagenPerfil != null
+                          ? Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  '${Enviroment.uploadsUrl}${user.imagenPerfil}',
+                                  width: 52,
+                                  height: 52,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.restaurant_menu,
+                                    color: Colors.white,
+                                    size: 32,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.restaurant_menu,
+                                color: Colors.white,
+                                size: 32,
+                              ),
+                            ),
                       const SizedBox(width: 12),
                       const Text(
                         'Papeeta',
@@ -59,7 +83,9 @@ class CustomDrawer extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (user != null && user.alias != null && user.alias!.isNotEmpty) ...[
+                  if (user != null &&
+                      user.alias != null &&
+                      user.alias!.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     Text(
                       user.alias!,
@@ -121,6 +147,14 @@ class CustomDrawer extends StatelessWidget {
                           onTap: () {
                             context.pop();
                             context.push('/groups');
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.person),
+                          title: const Text('Perfil'),
+                          onTap: () {
+                            context.pop();
+                            context.push('/profile');
                           },
                         ),
                       ],

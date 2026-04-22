@@ -59,6 +59,10 @@ class AppRouter {
       ),
       GoRoute(path: '/', builder: (context, state) => const HomePage()),
       GoRoute(
+        path: '/profile',
+        builder: (context, state) => const ProfilePage(),
+      ),
+      GoRoute(
         path: '/recipe/:id',
         builder: (context, state) {
           final recipeId = int.tryParse(state.pathParameters['id'] ?? '');

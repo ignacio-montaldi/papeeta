@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:papeeta/features/auth/data/datasources/auth_local_datasource.dart';
 import 'package:papeeta/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:papeeta/features/auth/data/mappers/user_mapper.dart';
@@ -57,6 +58,27 @@ class AuthRepositoryImpl implements AuthRepository {
       throw Exception('Could not register user');
     }
     await localDataSource.saveToken(response.token);
+    return UserMapper.toEntity(response.user);
+  }
+
+  @override
+  Future<User> updateProfile({
+    String? alias,
+    String? email,
+    String? passwordNueva,
+    String? passwordActual,
+    File? imagen,
+  }) async {
+    final response = await remoteDataSource.updateProfile(
+      alias: alias,
+      email: email,
+      passwordNueva: passwordNueva,
+      passwordActual: passwordActual,
+      imagen: imagen,
+    );
+    if (!response.ok) {
+      throw Exception(response.message ?? 'Could not update profile');
+    }
     return UserMapper.toEntity(response.user);
   }
 }

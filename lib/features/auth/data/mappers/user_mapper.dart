@@ -8,6 +8,7 @@ class UserMapper {
       nombreUsuario: dto.nombreUsuario,
       alias: dto.alias,
       email: dto.email,
+      imagenPerfil: dto.imagenPerfil,
     );
   }
 }

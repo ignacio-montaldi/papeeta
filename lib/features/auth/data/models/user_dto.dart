@@ -3,8 +3,15 @@ class UserDto {
   final String nombreUsuario;
   final String? alias;
   final String? email;
+  final String? imagenPerfil;
 
-  UserDto({required this.id, required this.nombreUsuario, this.alias, this.email});
+  UserDto({
+    required this.id,
+    required this.nombreUsuario,
+    this.alias,
+    this.email,
+    this.imagenPerfil,
+  });
 
   factory UserDto.fromJson(Map<String, dynamic> json) {
     return UserDto(
@@ -12,6 +19,7 @@ class UserDto {
       nombreUsuario: json["nombre_usuario"] ?? '',
       alias: json["alias"],
       email: json["email"],
+      imagenPerfil: json["imagen_perfil"],
     );
   }
 }
