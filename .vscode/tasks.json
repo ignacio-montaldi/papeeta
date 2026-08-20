@@ -1,0 +1,21 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      // Forwards the selected Android device's localhost:3000 (API) to the Mac,
+      // so we can reuse `localhost` from env/dev.json. Uses `-s` with the
+      // currently selected device in the Flutter status bar so it works even
+      // when multiple devices are attached. Runs before launching Flutter on
+      // an emulator or USB-connected phone.
+      "label": "adb reverse dev ports",
+      "type": "shell",
+      "command": "adb -s ${command:flutter.getSelectedDeviceId} reverse tcp:3000 tcp:3000",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}
