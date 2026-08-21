@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class LoginLabels extends StatelessWidget {
-  final String ruta;
-  final String titulo;
-  final String subtitulo;
+import 'package:papeeta/core/theme/theme.dart';
 
+/// Par pregunta + acción para alternar entre Login y Register.
+class LoginLabels extends StatelessWidget {
   const LoginLabels({
     super.key,
     required this.ruta,
@@ -13,30 +12,35 @@ class LoginLabels extends StatelessWidget {
     required this.subtitulo,
   });
 
+  final String ruta;
+  final String titulo;
+  final String subtitulo;
+
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          titulo, //'¿No tienes cuenta?',
-          style: const TextStyle(
-            color: Colors.black54,
+          titulo,
+          style: AppTypography.body.copyWith(
             fontSize: 15,
-            fontWeight: FontWeight.w300,
+            color: colors.onSurfaceVariant,
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpacing.sm),
         GestureDetector(
-          onTap: () {
-            final path = ruta == 'login' ? '/login' : '/register';
-            context.go(path);
-          },
-          child: Text(
-            subtitulo, //'Crea una ahora!',
-            style: TextStyle(
-              color: Color(0XFF086375),
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+          onTap: () => context.go(ruta == 'login' ? '/login' : '/register'),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+            child: Text(
+              subtitulo,
+              style: AppTypography.button.copyWith(
+                fontSize: 16,
+                color: colors.secondary,
+              ),
             ),
           ),
         ),

@@ -1,55 +1,82 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+
 import 'package:papeeta/core/domain/entities/recipe_share_group.dart';
+import 'package:papeeta/core/theme/theme.dart';
 import 'package:papeeta/features/groups/presentation/bloc/groups_bloc.dart';
 import 'package:papeeta/features/groups/presentation/bloc/groups_event.dart';
 import 'package:papeeta/features/groups/presentation/bloc/groups_state.dart';
-import 'package:papeeta/features/groups/presentation/widgets/group_card.dart';
 import 'package:papeeta/features/groups/presentation/widgets/create_group_sheet.dart';
+import 'package:papeeta/widgets/ds/ds.dart';
 
 class GroupsPage extends StatelessWidget {
   const GroupsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mis Grupos', style: TextStyle(color: Colors.white)),
-        backgroundColor: Theme.of(context).colorScheme.onPrimary,
+        title: const Text('Mis grupos'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
         ),
       ),
+      // El teal es el acento de la feature Grupos: acá el FAB es secondary.
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showCreateGroupSheet(context),
-        backgroundColor: Theme.of(context).colorScheme.secondary,
-        child: const Icon(Icons.add, color: Colors.white),
+        onPressed: () => _abrirCrearGrupo(context),
+        backgroundColor: colors.secondary,
+        foregroundColor: colors.onSecondary,
+        tooltip: 'Crear grupo',
+        child: const Icon(Icons.add_rounded),
       ),
       body: BlocConsumer<GroupsBloc, GroupsState>(
         listener: (context, state) {
           if (state is GroupCreated) {
             context.read<GroupsBloc>().add(LoadMyGroups());
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Grupo "${state.group.name}" creado')),
+            showAppSnackBar(
+              context,
+              message: 'Grupo "${state.group.name}" creado',
+              intent: SnackIntent.success,
             );
           }
           if (state is GroupsError) {
-            ScaffoldMessenger.of(
+            showAppSnackBar(
               context,
-            ).showSnackBar(SnackBar(content: Text(state.message)));
+              message: state.message,
+              intent: SnackIntent.error,
+              actionLabel: 'Reintentar',
+              onAction: () => context.read<GroupsBloc>().add(LoadMyGroups()),
+            );
           }
         },
         builder: (context, state) {
-          if (state is GroupsLoading) {
-            return const Center(child: CircularProgressIndicator());
+          if (state is GroupsLoading || state is GroupsInitial) {
+            return const _GroupsSkeleton();
+          }
+
+          if (state is GroupsError) {
+            return ErrorStateView(
+              icon: Icons.cloud_off_rounded,
+              title: 'No pudimos cargar tus grupos',
+              message: 'Algo salió mal de nuestro lado. Probá de nuevo en un momento.',
+              onRetry: () => context.read<GroupsBloc>().add(LoadMyGroups()),
+            );
           }
 
           if (state is GroupsLoaded) {
             if (state.groups.isEmpty) {
-              return _EmptyState(
-                onCreateTap: () => _showCreateGroupSheet(context),
+              return EmptyStateView(
+                icon: Icons.group_rounded,
+                tone: EmptyStateTone.accent,
+                title: 'Todavía no tenés grupos',
+                message: 'Creá un grupo para compartir recetas con tu familia o amigos.',
+                actionLabel: 'Crear grupo',
+                actionIcon: Icons.group_add_rounded,
+                onAction: () => _abrirCrearGrupo(context),
               );
             }
             return _GroupsList(groups: state.groups);
@@ -61,11 +88,9 @@ class GroupsPage extends StatelessWidget {
     );
   }
 
-  void _showCreateGroupSheet(BuildContext context) {
-    showModalBottomSheet(
+  void _abrirCrearGrupo(BuildContext context) {
+    showAppBottomSheet(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => BlocProvider.value(
         value: context.read<GroupsBloc>(),
         child: const CreateGroupSheet(),
@@ -75,65 +100,45 @@ class GroupsPage extends StatelessWidget {
 }
 
 class _GroupsList extends StatelessWidget {
-  final List<RecipeShareGroup> groups;
-
   const _GroupsList({required this.groups});
+
+  final List<RecipeShareGroup> groups;
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.xxxl * 2,
+      ),
       itemCount: groups.length,
+      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.lg),
       itemBuilder: (context, index) {
         final group = groups[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: GroupCard(
-            group: group,
-            onTap: () => context.push('/groups/${group.id}'),
-          ),
+        return GroupCard(
+          group: group,
+          onTap: () => context.push('/groups/${group.id}'),
         );
       },
     );
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  final VoidCallback onCreateTap;
-
-  const _EmptyState({required this.onCreateTap});
+class _GroupsSkeleton extends StatelessWidget {
+  const _GroupsSkeleton();
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.group_outlined, size: 80, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            'No tienes grupos aún',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey[600],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Crea un grupo para compartir recetas con amigos',
-            style: TextStyle(color: Colors.grey[500]),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: onCreateTap,
-            icon: const Icon(Icons.add),
-            label: const Text('Crear Grupo'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.secondary,
-              foregroundColor: Colors.white,
-            ),
-          ),
+    return Skeletonized(
+      child: ListView(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        physics: const NeverScrollableScrollPhysics(),
+        children: const [
+          GroupCardSkeleton(),
+          SizedBox(height: AppSpacing.lg),
+          GroupCardSkeleton(),
         ],
       ),
     );

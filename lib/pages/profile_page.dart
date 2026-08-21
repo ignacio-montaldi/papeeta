@@ -1,12 +1,16 @@
 import 'dart:io';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+
+import 'package:papeeta/core/theme/theme.dart';
 import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:papeeta/global/enviroment.dart';
-import 'package:papeeta/widgets/widgets.dart';
+import 'package:papeeta/widgets/ds/ds.dart';
+import 'package:papeeta/widgets/image_source_sheet.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -23,7 +27,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   File? _imagenSeleccionada;
   String? _imagenUrlAnterior;
-  bool _mostrarPassword = false;
 
   @override
   void initState() {
@@ -46,18 +49,15 @@ class _ProfilePageState extends State<ProfilePage> {
     super.dispose();
   }
 
-  void _onImageSourceSelected(ImageSource source) async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(
+  Future<void> _elegirImagen(ImageSource source) async {
+    final picked = await ImagePicker().pickImage(
       source: source,
       maxWidth: 800,
       maxHeight: 800,
       imageQuality: 80,
     );
-    if (pickedFile != null) {
-      setState(() {
-        _imagenSeleccionada = File(pickedFile.path);
-      });
+    if (picked != null) {
+      setState(() => _imagenSeleccionada = File(picked.path));
     }
   }
 
@@ -71,161 +71,130 @@ class _ProfilePageState extends State<ProfilePage> {
     final passwordActual = _passwordActualCtrl.text.trim();
 
     if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('El correo es obligatorio'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
+      showAppSnackBar(
+        context,
+        message: 'El correo es obligatorio',
+        intent: SnackIntent.error,
       );
       return;
     }
 
     if (alias.isEmpty && passwordNueva.isEmpty && _imagenSeleccionada == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No realizaste ningún cambio'),
-          backgroundColor: Colors.orange,
-          behavior: SnackBarBehavior.floating,
-        ),
+      showAppSnackBar(
+        context,
+        message: 'No hiciste ningún cambio',
+        intent: SnackIntent.warning,
       );
       return;
     }
 
     context.read<AuthBloc>().add(
-      UpdateProfileRequested(
-        alias: alias,
-        email: email,
-        passwordNueva: passwordNueva.isNotEmpty ? passwordNueva : null,
-        passwordActual: passwordNueva.isNotEmpty ? passwordActual : null,
-        imagen: _imagenSeleccionada,
-      ),
-    );
+          UpdateProfileRequested(
+            alias: alias,
+            email: email,
+            passwordNueva: passwordNueva.isNotEmpty ? passwordNueva : null,
+            passwordActual: passwordNueva.isNotEmpty ? passwordActual : null,
+            imagen: _imagenSeleccionada,
+          ),
+        );
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-        title: const Text('Mi Perfil'),
+        title: const Text('Mi perfil'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
         ),
       ),
       body: BlocListener<AuthBloc, AuthState>(
         listenWhen: (previous, current) =>
-            current is! ProfileUpdating && !(current is Authenticated && previous is ProfileUpdateError),
+            current is! ProfileUpdating &&
+            !(current is Authenticated && previous is ProfileUpdateError),
         listener: (context, state) {
           if (state is ProfileUpdateError) {
-            final msg = state.message.replaceFirst('Exception: ', '');
-            String mensaje;
-            if (msg.contains('EMAIL_IN_USE')) {
-              mensaje = 'El correo ya está en uso';
-            } else if (msg.contains('PASSWORD_CURRENT_INVALID')) {
-              mensaje = 'Contraseña actual incorrecta';
-            } else if (msg.contains('PASSWORD_CURRENT_REQUIRED')) {
-              mensaje = 'Ingresá tu contraseña actual para cambiarla';
-            } else if (msg.contains('UPDATE_FAILED')) {
-              mensaje = 'No se pudo actualizar el perfil';
-            } else {
-              mensaje = 'Ocurrió un error inesperado';
-            }
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(mensaje),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
-              ),
+            showAppSnackBar(
+              context,
+              message: _traducirError(state.message),
+              intent: SnackIntent.error,
             );
           } else if (state is Authenticated) {
-            final newImg = state.user.imagenPerfil;
-            if (newImg != null && newImg != _imagenUrlAnterior) {
-              _imagenUrlAnterior = newImg;
-              _imagenSeleccionada = null;
+            final nueva = state.user.imagenPerfil;
+            if (nueva != null && nueva != _imagenUrlAnterior) {
+              setState(() {
+                _imagenUrlAnterior = nueva;
+                _imagenSeleccionada = null;
+              });
             }
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Perfil actualizado'),
-                backgroundColor: Colors.green,
-                behavior: SnackBarBehavior.floating,
-              ),
+            showAppSnackBar(
+              context,
+              message: 'Perfil actualizado',
+              intent: SnackIntent.success,
             );
           }
         },
         child: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
-            final isLoading = state is ProfileUpdating;
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  _buildAvatar(),
-                  const SizedBox(height: 30),
-                  CustomInput(
-                    icon: Icons.person_outline,
-                    placeholder: 'Alias',
-                    textController: _aliasCtrl,
-                  ),
-                  const SizedBox(height: 16),
-                  CustomInput(
-                    icon: Icons.mail_outline,
-                    placeholder: 'Correo electrónico',
-                    keyboardType: TextInputType.emailAddress,
-                    textController: _emailCtrl,
-                  ),
-                  const SizedBox(height: 24),
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Cambiar contraseña',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  CustomInput(
-                    icon: Icons.lock_outline,
-                    placeholder: 'Nueva contraseña',
-                    textController: _passwordNuevaCtrl,
-                    isPassword: !_mostrarPassword,
-                  ),
-                  const SizedBox(height: 12),
-                  CustomInput(
-                    icon: Icons.lock_outline,
-                    placeholder: 'Contraseña actual',
-                    textController: _passwordActualCtrl,
-                    isPassword: !_mostrarPassword,
-                  ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: () =>
-                          setState(() => _mostrarPassword = !_mostrarPassword),
-                      icon: Icon(
-                        _mostrarPassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                        size: 18,
-                      ),
-                      label: Text(_mostrarPassword ? 'Ocultar' : 'Mostrar'),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ButtonComponent(
-                      text: 'Guardar cambios',
-                      onPressed: isLoading ? () {} : _guardar,
-                    ),
-                  ),
-                ],
+            final guardando = state is ProfileUpdating;
+
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl,
+                AppSpacing.xl,
+                AppSpacing.xl,
+                AppSpacing.xxxl,
               ),
+              children: [
+                Center(child: _avatar()),
+                const SizedBox(height: AppSpacing.xxl),
+                AppTextField(
+                  label: 'Alias',
+                  icon: Icons.person_outline_rounded,
+                  controller: _aliasCtrl,
+                  textCapitalization: TextCapitalization.words,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                AppTextField(
+                  label: 'Correo electrónico',
+                  icon: Icons.mail_outline_rounded,
+                  keyboardType: TextInputType.emailAddress,
+                  controller: _emailCtrl,
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  'Cambiar contraseña',
+                  style: AppTypography.title.copyWith(
+                    fontSize: 16,
+                    color: colors.onSurface,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                AppTextField(
+                  label: 'Nueva contraseña',
+                  icon: Icons.lock_outline_rounded,
+                  controller: _passwordNuevaCtrl,
+                  isPassword: true,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                AppTextField(
+                  label: 'Contraseña actual',
+                  icon: Icons.lock_outline_rounded,
+                  controller: _passwordActualCtrl,
+                  isPassword: true,
+                  helper: 'Solo hace falta si vas a cambiar la contraseña',
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                AppButton(
+                  label: 'Guardar cambios',
+                  isLoading: guardando,
+                  loadingLabel: 'Guardando…',
+                  onPressed: guardando ? null : _guardar,
+                ),
+              ],
             );
           },
         ),
@@ -233,41 +202,47 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildAvatar() {
-    final imageUrl = _imagenSeleccionada != null
-        ? _imagenSeleccionada!.path
-        : _imagenUrlAnterior != null
-        ? '${Enviroment.uploadsUrl}$_imagenUrlAnterior'
-        : null;
+  Widget _avatar() {
+    final colors = context.colors;
 
-    final isFile = imageUrl != null && imageUrl.startsWith('/');
+    final ruta = _imagenSeleccionada?.path ??
+        (_imagenUrlAnterior != null
+            ? '${Enviroment.uploadsUrl}$_imagenUrlAnterior'
+            : null);
+    final esArchivo = _imagenSeleccionada != null;
 
     return GestureDetector(
       onTap: () => ImageSourceSheet.show(
         context,
-        onImageSourceSelected: _onImageSourceSelected,
+        onImageSourceSelected: _elegirImagen,
       ),
       child: Stack(
         children: [
-          CircleAvatar(
-            radius: 60,
-            backgroundColor: Theme.of(
-              context,
-            ).colorScheme.primary.withValues(alpha: 0.1),
-            backgroundImage: imageUrl != null
-                ? (isFile
-                    ? FileImage(File(imageUrl))
-                    : CachedNetworkImageProvider(imageUrl))
-                : null,
-            child: imageUrl == null
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: colors.primaryContainer,
+              shape: BoxShape.circle,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: ruta == null
                 ? Icon(
-                    Icons.person,
+                    Icons.person_rounded,
                     size: 60,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withValues(alpha: 0.5),
+                    color: context.semantic.emptyIcon,
                   )
-                : null,
+                : esArchivo
+                    ? Image.file(File(ruta), fit: BoxFit.cover)
+                    : CachedNetworkImage(
+                        imageUrl: ruta,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => Icon(
+                          Icons.person_rounded,
+                          size: 60,
+                          color: context.semantic.emptyIcon,
+                        ),
+                      ),
           ),
           Positioned(
             bottom: 0,
@@ -275,14 +250,14 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
+                color: colors.primary,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
+                border: Border.all(color: colors.surface, width: 2),
               ),
-              child: const Icon(
-                Icons.camera_alt,
+              child: Icon(
+                Icons.camera_alt_rounded,
                 size: 18,
-                color: Colors.white,
+                color: colors.onPrimary,
               ),
             ),
           ),
@@ -290,4 +265,23 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
+}
+
+/// Traduce los códigos que devuelve la API a mensajes en español.
+///
+/// El design system generaliza este patrón: nunca se muestra el código técnico
+/// crudo al usuario.
+String _traducirError(String raw) {
+  final msg = raw.replaceFirst('Exception: ', '');
+
+  if (msg.contains('EMAIL_IN_USE')) return 'Ese correo ya está en uso';
+  if (msg.contains('PASSWORD_CURRENT_INVALID')) {
+    return 'La contraseña actual no es correcta';
+  }
+  if (msg.contains('PASSWORD_CURRENT_REQUIRED')) {
+    return 'Ingresá tu contraseña actual para cambiarla';
+  }
+  if (msg.contains('UPDATE_FAILED')) return 'No se pudo actualizar el perfil';
+
+  return 'Ocurrió un error inesperado';
 }

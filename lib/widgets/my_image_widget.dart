@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+
+import 'package:papeeta/core/theme/theme.dart';
 import 'package:papeeta/features/recipes/domain/entities/recipe_image.dart';
 import 'package:papeeta/features/recipes/domain/entities/recipe_image_upload.dart';
 import 'package:papeeta/features/groups/domain/entities/group_image.dart';
@@ -57,7 +59,7 @@ class MyImageWidget extends StatelessWidget {
               ),
             ),
         errorWidget: (context, url, error) =>
-            errorWidget ?? const Icon(Icons.broken_image, color: Colors.grey),
+            errorWidget ?? _fallback(context),
       );
     } else if (isRemoteGroupImage) {
       final groupImage = image as GroupImage;
@@ -76,16 +78,28 @@ class MyImageWidget extends StatelessWidget {
               ),
             ),
         errorWidget: (context, url, error) =>
-            errorWidget ?? const Icon(Icons.broken_image, color: Colors.grey),
+            errorWidget ?? _fallback(context),
       );
     } else {
-      imageWidget =
-          errorWidget ?? const Icon(Icons.broken_image, color: Colors.grey);
+      imageWidget = errorWidget ?? Builder(builder: _fallback);
     }
 
     return ClipRRect(
       borderRadius: borderRadius ?? BorderRadius.zero,
       child: imageWidget,
+    );
+  }
+
+  /// Imagen rota: tinte de marca en vez de un gris fuera del sistema.
+  Widget _fallback(BuildContext context) {
+    return ColoredBox(
+      color: context.colors.primaryContainer,
+      child: Center(
+        child: Icon(
+          Icons.broken_image_rounded,
+          color: context.semantic.emptyIcon,
+        ),
+      ),
     );
   }
 }

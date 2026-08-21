@@ -1,12 +1,14 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+
 import 'package:papeeta/core/domain/entities/category.dart';
 import 'package:papeeta/core/domain/entities/category_group.dart';
+import 'package:papeeta/core/theme/theme.dart';
 import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
-import 'package:papeeta/features/recipes/domain/entities/recipe_image.dart';
 import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
-import 'package:papeeta/widgets/widgets.dart';
+import 'package:papeeta/widgets/ds/ds.dart';
 
 class CategoriesPage extends StatefulWidget {
   const CategoriesPage({super.key});
@@ -24,203 +26,220 @@ class _CategoriesPageState extends State<CategoriesPage> {
     context.read<CategoryBloc>().add(LoadCategories());
   }
 
+  void _cargar() => context.read<CategoryBloc>().add(LoadCategories());
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Categorías', style: TextStyle(color: Colors.white)),
-        elevation: 1,
-        backgroundColor: Theme.of(context).colorScheme.onPrimary,
+        title: const Text('Categorías'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.pop(),
         ),
       ),
       body: BlocBuilder<CategoryBloc, CategoryState>(
         builder: (context, state) {
           if (state is CategoryInitial || state is CategoryLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const _CategoriesSkeleton();
           }
 
           if (state is CategoryError) {
-            return Center(child: Text(state.message));
-          }
-
-          if (state is CategoryLoaded) {
-            final categories = state.categories;
-            final groups = state.groups;
-
-            if (categories.isEmpty && groups.isEmpty) {
-              return const Center(
-                child: Text('No se encontraron categorías ni grupos.'),
-              );
-            }
-
-            final filteredCategories = _selectedGroupId == null
-                ? categories
-                : categories
-                      .where(
-                        (c) =>
-                            c.groupId == _selectedGroupId ||
-                            c.group?.id == _selectedGroupId,
-                      )
-                      .toList();
-
-            return ListView(
-              padding: const EdgeInsets.only(top: 20),
-              children: [
-                if (groups.isNotEmpty)
-                  _GroupsList(
-                    groups: groups,
-                    selectedGroupId: _selectedGroupId,
-                    onGroupSelected: (groupId) {
-                      setState(() => _selectedGroupId = groupId);
-                    },
-                  ),
-                const SizedBox(height: 20),
-                if (filteredCategories.isNotEmpty)
-                  _CategoryGrid(
-                    categories: filteredCategories,
-                    onCategoryTap: (category) {
-                      context.read<RecipeBloc>().add(
-                        LoadRecipesByCategory(category.id),
-                      );
-                      context.push(
-                        '/categories/${category.id}',
-                        extra: category,
-                      );
-                    },
-                  )
-                else
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text(
-                        'No se encontraron categorías para este grupo.',
-                      ),
-                    ),
-                  ),
-              ],
+            return ErrorStateView(
+              title: 'No pudimos cargar las categorías',
+              message: 'Revisá tu conexión e intentá de nuevo.',
+              onRetry: _cargar,
             );
           }
 
-          return const SizedBox.shrink();
+          if (state is! CategoryLoaded) return const SizedBox.shrink();
+
+          final categories = state.categories;
+          final groups = state.groups;
+
+          if (categories.isEmpty && groups.isEmpty) {
+            return EmptyStateView(
+              icon: Icons.category_rounded,
+              title: 'Todavía no hay categorías',
+              message: 'Cuando se carguen categorías, van a aparecer acá.',
+              actionLabel: 'Reintentar',
+              actionIcon: Icons.refresh_rounded,
+              onAction: _cargar,
+            );
+          }
+
+          final filtered = _selectedGroupId == null
+              ? categories
+              : categories
+                  .where((c) =>
+                      c.groupId == _selectedGroupId ||
+                      c.group?.id == _selectedGroupId)
+                  .toList();
+
+          return CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              if (groups.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.lg),
+                    child: _GroupRail(
+                      groups: groups,
+                      selectedGroupId: _selectedGroupId,
+                      onSelected: (id) => setState(() => _selectedGroupId = id),
+                    ),
+                  ),
+                ),
+              if (filtered.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: EmptyStateView(
+                    icon: Icons.filter_alt_off_rounded,
+                    title: 'Sin categorías en este grupo',
+                    message: 'Probá con otro grupo o mirá todas.',
+                    actionLabel: 'Ver todas',
+                    onAction: () => setState(() => _selectedGroupId = null),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                    AppSpacing.xxl,
+                  ),
+                  sliver: SliverGrid.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: AppSpacing.lg,
+                      crossAxisSpacing: AppSpacing.lg,
+                      mainAxisExtent: 150,
+                    ),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) {
+                      final category = filtered[index];
+                      return _CategoryTile(
+                        category: category,
+                        onTap: () {
+                          context
+                              .read<RecipeBloc>()
+                              .add(LoadRecipesByCategory(category.id));
+                          context.push(
+                            '/categories/${category.id}',
+                            extra: category,
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+            ],
+          );
         },
       ),
     );
   }
 }
 
-class _CategoryGrid extends StatelessWidget {
-  const _CategoryGrid({required this.categories, required this.onCategoryTap});
+class _CategoryTile extends StatelessWidget {
+  const _CategoryTile({required this.category, required this.onTap});
 
-  final List<Category> categories;
-  final void Function(Category category) onCategoryTap;
+  final Category category;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      physics: const NeverScrollableScrollPhysics(),
-      shrinkWrap: true,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 15,
-        crossAxisSpacing: 15,
-        mainAxisExtent: 150,
-      ),
-      padding: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
-      itemCount: categories.length,
-      itemBuilder: (context, index) {
-        final category = categories[index];
-        return GestureDetector(
-          onTap: () => onCategoryTap(category),
-          child: Container(
-            height: 50,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.all(Radius.circular(25)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 3,
-                  spreadRadius: 0.3,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 30),
-                  child:
-                      category.imageUrl != null && category.imageUrl!.isNotEmpty
-                      ? MyImageWidget(
-                          image: RecipeImage(url: category.imageUrl!),
-                          height: 60,
-                          fit: BoxFit.cover,
-                        )
-                      : const Icon(Icons.broken_image, color: Colors.grey),
-                ),
-                const SizedBox(height: 10),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 15),
-                  child: Text(
-                    category.name,
-                    textAlign: TextAlign.center,
-                    maxLines: 3,
-                    style: TextStyle(
-                      fontSize: category.name.length < 25 ? 15 : 14,
-                      fontWeight: FontWeight.w500,
+    final colors = context.colors;
+    final hasImage =
+        category.imageUrl != null && category.imageUrl!.isNotEmpty;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: colors.surfaceContainer,
+          borderRadius: AppRadius.lgAll,
+          boxShadow: AppElevation.e1,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Expanded(
+              child: hasImage
+                  ? CachedNetworkImage(
+                      imageUrl: category.imageUrl!,
+                      fit: BoxFit.contain,
+                      errorWidget: (_, __, ___) => Icon(
+                        Icons.restaurant_menu_rounded,
+                        size: 36,
+                        color: context.semantic.emptyIcon,
+                      ),
+                    )
+                  : Icon(
+                      Icons.restaurant_menu_rounded,
+                      size: 36,
+                      color: context.semantic.emptyIcon,
                     ),
-                  ),
-                ),
-              ],
             ),
-          ),
-        );
-      },
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              category.name,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.label.copyWith(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: colors.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _GroupsList extends StatelessWidget {
-  const _GroupsList({
+/// Filtro horizontal por grupo de categorías.
+class _GroupRail extends StatelessWidget {
+  const _GroupRail({
     required this.groups,
     required this.selectedGroupId,
-    required this.onGroupSelected,
+    required this.onSelected,
   });
 
   final List<CategoryGroup> groups;
   final int? selectedGroupId;
-  final void Function(int? groupId) onGroupSelected;
+  final ValueChanged<int?> onSelected;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 120,
-      child: ListView.builder(
-        itemCount: groups.length + 1,
+      height: 104,
+      child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 15),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        itemCount: groups.length + 1,
+        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.lg),
         itemBuilder: (context, index) {
           if (index == 0) {
-            final isSelected = selectedGroupId == null;
             return _GroupItem(
               label: 'Todas',
-              icon: Icons.restaurant_menu,
-              selected: isSelected,
-              onTap: () => onGroupSelected(null),
+              icon: Icons.restaurant_menu_rounded,
+              selected: selectedGroupId == null,
+              onTap: () => onSelected(null),
             );
           }
 
           final group = groups[index - 1];
-          final isSelected = selectedGroupId == group.id;
           return _GroupItem(
             label: group.name,
             imageUrl: group.imageUrl,
-            selected: isSelected,
-            onTap: () => onGroupSelected(group.id),
+            selected: selectedGroupId == group.id,
+            onTap: () => onSelected(group.id),
           );
         },
       ),
@@ -231,71 +250,127 @@ class _GroupsList extends StatelessWidget {
 class _GroupItem extends StatelessWidget {
   const _GroupItem({
     required this.label,
-    this.imageUrl,
-    this.icon,
     required this.selected,
     required this.onTap,
+    this.imageUrl,
+    this.icon,
   });
 
   final String label;
-  final String? imageUrl;
-  final IconData? icon;
   final bool selected;
   final VoidCallback onTap;
+  final String? imageUrl;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        GestureDetector(
-          onTap: onTap,
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: selected ? 6 : 3,
-                  spreadRadius: selected ? 1 : 0.3,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Container(
-              decoration: selected
-                  ? BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.onSecondary,
-                        width: 3,
+    final colors = context.colors;
+    final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 72,
+        child: Column(
+          children: [
+            AnimatedContainer(
+              duration: AppMotion.fast,
+              width: AppSizes.categoryCircle,
+              height: AppSizes.categoryCircle,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: colors.primaryContainer,
+                shape: BoxShape.circle,
+                border: selected
+                    ? Border.all(color: colors.primary, width: 2.5)
+                    : null,
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: hasImage
+                  ? Padding(
+                      padding: const EdgeInsets.all(AppSpacing.sm + 2),
+                      child: CachedNetworkImage(
+                        imageUrl: imageUrl!,
+                        fit: BoxFit.contain,
+                        errorWidget: (_, __, ___) => Icon(
+                          Icons.restaurant_menu_rounded,
+                          size: 24,
+                          color: colors.primary,
+                        ),
                       ),
                     )
-                  : null,
-              child: CircleAvatar(
-                radius: 35,
-                backgroundColor: Colors.white,
-                child: imageUrl != null && imageUrl!.isNotEmpty
-                    ? MyImageWidget(
-                        image: RecipeImage(url: imageUrl!),
-                        width: 45,
-                        height: 45,
-                      )
-                    : Icon(icon, color: Colors.black54, size: 40),
+                  : Icon(
+                      icon ?? Icons.restaurant_menu_rounded,
+                      size: 26,
+                      color: colors.primary,
+                    ),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              label,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.label.copyWith(
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                color: selected ? colors.primary : colors.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoriesSkeleton extends StatelessWidget {
+  const _CategoriesSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Skeletonized(
+      child: ListView(
+        padding: const EdgeInsets.only(top: AppSpacing.lg),
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          SizedBox(
+            height: 104,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              itemCount: 5,
+              separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.lg),
+              itemBuilder: (_, __) => const SizedBox(
+                width: 72,
+                child: Column(
+                  children: [
+                    SkeletonBox.circle(size: AppSizes.categoryCircle),
+                    SizedBox(height: 7),
+                    SkeletonBox.line(width: 44, height: 9),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: 88,
-          child: Text(
-            label,
-            maxLines: 2,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          const SizedBox(height: AppSpacing.lg),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: AppSpacing.lg,
+              crossAxisSpacing: AppSpacing.lg,
+              mainAxisExtent: 150,
+            ),
+            itemCount: 4,
+            itemBuilder: (_, __) => const SkeletonBox(
+              borderRadius: AppRadius.lgAll,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

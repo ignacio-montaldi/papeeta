@@ -1,58 +1,99 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-class ImageSourceSheet extends StatelessWidget {
-  final Function(ImageSource) onImageSourceSelected;
+import 'package:papeeta/core/theme/theme.dart';
+import 'package:papeeta/widgets/ds/app_bottom_sheet.dart';
 
+/// Sheet para elegir el origen de una foto.
+class ImageSourceSheet extends StatelessWidget {
   const ImageSourceSheet({super.key, required this.onImageSourceSelected});
+
+  final ValueChanged<ImageSource> onImageSourceSelected;
 
   static Future<void> show(
     BuildContext context, {
-    required Function(ImageSource) onImageSourceSelected,
+    required ValueChanged<ImageSource> onImageSourceSelected,
   }) {
-    return showModalBottomSheet(
+    return showAppBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      builder: (_) => ImageSourceSheet(
+        onImageSourceSelected: onImageSourceSelected,
       ),
-      builder: (_) => ImageSourceSheet(onImageSourceSelected: onImageSourceSelected),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
+    return AppBottomSheet(
+      title: 'Agregar foto',
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.xl,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 12),
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade400,
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          const SizedBox(height: 20),
-          ListTile(
-            leading: const Icon(Icons.photo_camera_outlined),
-            title: const Text('Tomar foto'),
+          _Opcion(
+            icon: Icons.photo_camera_rounded,
+            label: 'Tomar foto',
             onTap: () {
               Navigator.pop(context);
               onImageSourceSelected(ImageSource.camera);
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.photo_library_outlined),
-            title: const Text('Elegir de la galería'),
+          Divider(height: 1, color: context.semantic.divider),
+          _Opcion(
+            icon: Icons.photo_library_rounded,
+            label: 'Elegir de la galería',
             onTap: () {
               Navigator.pop(context);
               onImageSourceSelected(ImageSource.gallery);
             },
           ),
-          const SizedBox(height: 12),
         ],
+      ),
+    );
+  }
+}
+
+class _Opcion extends StatelessWidget {
+  const _Opcion({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppRadius.mdAll,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xs,
+          vertical: AppSpacing.md + 2,
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 24, color: colors.primary),
+            const SizedBox(width: 14),
+            Text(
+              label,
+              style: AppTypography.body.copyWith(
+                fontSize: 15,
+                color: colors.onSurface,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

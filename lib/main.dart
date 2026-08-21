@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:papeeta/core/di/injection.dart';
 import 'package:papeeta/core/router/app_router.dart';
+import 'package:papeeta/core/theme/theme.dart';
 import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
 import 'package:papeeta/features/ingredients/presentation/bloc/ingredient_bloc.dart';
@@ -33,14 +34,9 @@ class MyApp extends StatelessWidget {
       child: MaterialApp.router(
         debugShowCheckedModeBanner: false,
         title: 'Papeeta',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF3C1642),
-            onPrimary: const Color(0xFF3C1642),
-            onSecondary: const Color(0XFF086375),
-          ),
-          fontFamily: 'Inter',
-        ),
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        themeMode: ThemeMode.system,
         routerConfig: appRouter.router,
       ),
     );

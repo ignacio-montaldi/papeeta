@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:papeeta/helpers/helpers.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:go_router/go_router.dart';
 
-import 'package:papeeta/widgets/widgets.dart';
+import 'package:papeeta/core/theme/theme.dart';
+import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:papeeta/widgets/ds/ds.dart';
+import 'package:papeeta/widgets/login_labels.dart';
+import 'package:papeeta/widgets/logo.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -12,25 +14,33 @@ class LoginPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xfff2f2f2),
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.9,
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Logo(titulo: 'Papeeta'),
-                _Form(),
-                LoginLabels(
-                  ruta: 'register',
-                  titulo: '¿No tienes cuenta?',
-                  subtitulo: "Crea una ahora!",
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: const IntrinsicHeight(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Logo(titulo: 'Papeeta'),
+                      _Form(),
+                      Padding(
+                        padding: EdgeInsets.only(bottom: AppSpacing.xl),
+                        child: LoginLabels(
+                          ruta: 'register',
+                          titulo: '¿Todavía no tenés cuenta?',
+                          subtitulo: 'Creá una ahora',
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -45,8 +55,22 @@ class _Form extends StatefulWidget {
 }
 
 class _FormState extends State<_Form> {
-  final emailCtrl = TextEditingController();
-  final passwordCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    super.dispose();
+  }
+
+  void _ingresar() {
+    FocusScope.of(context).unfocus();
+    context.read<AuthBloc>().add(
+          LoginRequested(_emailCtrl.text.trim(), _passwordCtrl.text.trim()),
+        );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,45 +79,44 @@ class _FormState extends State<_Form> {
         if (state is Authenticated) {
           context.go('/');
         } else if (state is AuthError) {
-          mostrarAlerta(context, "Ups!", state.message);
+          showAppSnackBar(
+            context,
+            message: state.message,
+            intent: SnackIntent.error,
+          );
         }
       },
-      child: Container(
-        margin: const EdgeInsets.only(top: 40),
-        padding: const EdgeInsets.symmetric(horizontal: 50),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xxl,
+          vertical: AppSpacing.xxl,
+        ),
         child: Column(
           children: [
-            CustomInput(
-              icon: Icons.mail_outline,
-              placeholder: 'Correo',
+            AppTextField(
+              label: 'Correo',
+              icon: Icons.mail_outline_rounded,
               keyboardType: TextInputType.emailAddress,
-              textController: emailCtrl,
+              controller: _emailCtrl,
+              textInputAction: TextInputAction.next,
             ),
-            const SizedBox(height: 20),
-            CustomInput(
-              icon: Icons.lock_outline,
-              placeholder: 'Contraseña',
-              textController: passwordCtrl,
+            const SizedBox(height: AppSpacing.lg),
+            AppTextField(
+              label: 'Contraseña',
+              icon: Icons.lock_outline_rounded,
+              controller: _passwordCtrl,
               isPassword: true,
+              textInputAction: TextInputAction.done,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.xl),
             BlocBuilder<AuthBloc, AuthState>(
               builder: (context, state) {
-                final isAutenticando = state is AuthLoading;
-
-                return ButtonComponent(
-                  text: "Ingrese",
-                  onPressed: isAutenticando
-                      ? () => {}
-                      : () {
-                          FocusScope.of(context).unfocus();
-                          context.read<AuthBloc>().add(
-                            LoginRequested(
-                              emailCtrl.text.trim(),
-                              passwordCtrl.text.trim(),
-                            ),
-                          );
-                        },
+                final autenticando = state is AuthLoading;
+                return AppButton(
+                  label: 'Ingresar',
+                  isLoading: autenticando,
+                  loadingLabel: 'Ingresando…',
+                  onPressed: autenticando ? null : _ingresar,
                 );
               },
             ),

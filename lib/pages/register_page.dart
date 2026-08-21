@@ -1,40 +1,61 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:papeeta/helpers/helpers.dart';
-import 'package:papeeta/widgets/widgets.dart';
-
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:papeeta/core/theme/theme.dart';
 import 'package:papeeta/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:papeeta/widgets/ds/ds.dart';
+import 'package:papeeta/widgets/login_labels.dart';
+import 'package:papeeta/widgets/logo.dart';
 
 class RegisterPage extends StatelessWidget {
   const RegisterPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Scaffold(
-      backgroundColor: const Color(0xfff2f2f2),
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.9,
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Logo(titulo: 'Registro'),
-                _Form(),
-                LoginLabels(
-                  ruta: 'login',
-                  titulo: '¿Ya tienes una cuenta?',
-                  subtitulo: 'Ingresa ahora!',
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Logo(titulo: 'Registro'),
+                      const _Form(),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+                        child: Column(
+                          children: [
+                            const LoginLabels(
+                              ruta: 'login',
+                              titulo: '¿Ya tenés una cuenta?',
+                              subtitulo: 'Ingresá ahora',
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            Text(
+                              'Términos y condiciones de uso',
+                              style: AppTypography.label.copyWith(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
+                                color: colors.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                Text(
-                  'Terminos y condiciones de uso',
-                  style: TextStyle(fontWeight: FontWeight.w200),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -49,10 +70,31 @@ class _Form extends StatefulWidget {
 }
 
 class _FormState extends State<_Form> {
-  final nombreUsuarioCtrl = TextEditingController();
-  final aliasCtrl = TextEditingController();
-  final emailCtrl = TextEditingController();
-  final passwordCtrl = TextEditingController();
+  final _nombreUsuarioCtrl = TextEditingController();
+  final _aliasCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _nombreUsuarioCtrl.dispose();
+    _aliasCtrl.dispose();
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    super.dispose();
+  }
+
+  void _registrar() {
+    FocusScope.of(context).unfocus();
+    context.read<AuthBloc>().add(
+          RegisterRequested(
+            _aliasCtrl.text.trim(),
+            _nombreUsuarioCtrl.text.trim(),
+            _emailCtrl.text.trim(),
+            _passwordCtrl.text.trim(),
+          ),
+        );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,57 +103,59 @@ class _FormState extends State<_Form> {
         if (state is Authenticated) {
           context.go('/');
         } else if (state is AuthError) {
-          mostrarAlerta(context, 'Ups!', state.message);
+          showAppSnackBar(
+            context,
+            message: state.message,
+            intent: SnackIntent.error,
+          );
         }
       },
-      child: Container(
-        margin: const EdgeInsets.only(top: 40),
-        padding: const EdgeInsets.symmetric(horizontal: 50),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xxl,
+          vertical: AppSpacing.xl,
+        ),
         child: Column(
           children: [
-            CustomInput(
-              icon: Icons.person_2_outlined,
-              placeholder: 'Alias (opcional)',
-              textController: aliasCtrl,
+            AppTextField(
+              label: 'Alias (opcional)',
+              icon: Icons.person_outline_rounded,
+              controller: _aliasCtrl,
+              textCapitalization: TextCapitalization.words,
+              textInputAction: TextInputAction.next,
             ),
-            const SizedBox(height: 20),
-            CustomInput(
-              icon: Icons.alternate_email,
-              placeholder: 'Nombre de usuario',
-              textController: nombreUsuarioCtrl,
+            const SizedBox(height: AppSpacing.md),
+            AppTextField(
+              label: 'Nombre de usuario',
+              icon: Icons.alternate_email_rounded,
+              controller: _nombreUsuarioCtrl,
+              textInputAction: TextInputAction.next,
             ),
-            const SizedBox(height: 20),
-            CustomInput(
-              icon: Icons.mail_outline,
-              placeholder: 'Correo',
+            const SizedBox(height: AppSpacing.md),
+            AppTextField(
+              label: 'Correo',
+              icon: Icons.mail_outline_rounded,
               keyboardType: TextInputType.emailAddress,
-              textController: emailCtrl,
+              controller: _emailCtrl,
+              textInputAction: TextInputAction.next,
             ),
-            const SizedBox(height: 20),
-            CustomInput(
-              icon: Icons.lock_outline,
-              placeholder: 'Contraseña',
-              textController: passwordCtrl,
+            const SizedBox(height: AppSpacing.md),
+            AppTextField(
+              label: 'Contraseña',
+              icon: Icons.lock_outline_rounded,
+              controller: _passwordCtrl,
               isPassword: true,
+              textInputAction: TextInputAction.done,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.xl),
             BlocBuilder<AuthBloc, AuthState>(
               builder: (context, state) {
-                final isAutenticando = state is AuthLoading;
-                return ButtonComponent(
-                  text: "Crear cuenta",
-                  onPressed: isAutenticando
-                      ? () {}
-                      : () {
-                          context.read<AuthBloc>().add(
-                            RegisterRequested(
-                              aliasCtrl.text.trim(),
-                              nombreUsuarioCtrl.text.trim(),
-                              emailCtrl.text.trim(),
-                              passwordCtrl.text.trim(),
-                            ),
-                          );
-                        },
+                final registrando = state is AuthLoading;
+                return AppButton(
+                  label: 'Crear cuenta',
+                  isLoading: registrando,
+                  loadingLabel: 'Creando cuenta…',
+                  onPressed: registrando ? null : _registrar,
                 );
               },
             ),

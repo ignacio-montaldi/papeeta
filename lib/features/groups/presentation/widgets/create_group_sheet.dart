@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'package:papeeta/core/theme/theme.dart';
 import 'package:papeeta/features/groups/presentation/bloc/groups_bloc.dart';
 import 'package:papeeta/features/groups/presentation/bloc/groups_event.dart';
+import 'package:papeeta/widgets/ds/ds.dart';
 
 class CreateGroupSheet extends StatefulWidget {
   const CreateGroupSheet({super.key});
@@ -14,7 +17,6 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
-  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -25,82 +27,43 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
+    return AppBottomSheet(
+      title: 'Crear grupo',
+      onClose: () => Navigator.pop(context),
       child: Form(
         key: _formKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Crear Grupo',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            TextFormField(
+            AppTextField(
+              label: 'Nombre del grupo',
+              hint: 'Ej. Recetas de la familia',
               controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Nombre del grupo',
-                hintText: 'Ej: Recetas de la familia',
-                border: OutlineInputBorder(),
-              ),
+              textCapitalization: TextCapitalization.sentences,
+              textInputAction: TextInputAction.next,
               validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Ingresa un nombre';
+                if (value == null || value.trim().isEmpty) {
+                  return 'Ingresá un nombre';
                 }
                 return null;
               },
             ),
-            const SizedBox(height: 16),
-            TextFormField(
+            const SizedBox(height: AppSpacing.lg),
+            AppTextField(
+              label: 'Descripción (opcional)',
+              hint: 'Ej. Lo que cocinamos los domingos',
               controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Descripción (opcional)',
-                hintText: 'Ej: Recetas que compartimos en reuniones',
-                border: OutlineInputBorder(),
-              ),
+              textCapitalization: TextCapitalization.sentences,
               maxLines: 3,
+              minLines: 2,
             ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _createGroup,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.secondary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text('Crear Grupo'),
-              ),
+            const SizedBox(height: AppSpacing.xl),
+            AppButton(
+              label: 'Crear grupo',
+              icon: Icons.group_add_rounded,
+              variant: AppButtonVariant.secondary,
+              onPressed: _crearGrupo,
             ),
           ],
         ),
@@ -108,18 +71,17 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
     );
   }
 
-  void _createGroup() {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
-      context.read<GroupsBloc>().add(
-        CreateGroup(
-          name: _nameController.text.trim(),
-          description: _descriptionController.text.trim().isEmpty
-              ? null
-              : _descriptionController.text.trim(),
-        ),
-      );
-      Navigator.pop(context);
-    }
+  void _crearGrupo() {
+    if (!_formKey.currentState!.validate()) return;
+
+    final description = _descriptionController.text.trim();
+
+    context.read<GroupsBloc>().add(
+          CreateGroup(
+            name: _nameController.text.trim(),
+            description: description.isEmpty ? null : description,
+          ),
+        );
+    Navigator.pop(context);
   }
 }

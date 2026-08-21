@@ -1,14 +1,16 @@
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:pull_to_refresh/pull_to_refresh.dart';
+
 import 'package:papeeta/core/domain/entities/category.dart';
+import 'package:papeeta/core/theme/theme.dart';
 import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
 import 'package:papeeta/features/recipes/domain/entities/recipe.dart';
 import 'package:papeeta/features/recipes/presentation/bloc/recipe_bloc.dart';
-import 'package:pull_to_refresh/pull_to_refresh.dart';
-
-import 'package:papeeta/widgets/widgets.dart';
+import 'package:papeeta/widgets/custom_drawer.dart';
+import 'package:papeeta/widgets/ds/ds.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,14 +22,35 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final RefreshController _refreshController = RefreshController();
 
+  /// Última lista conocida.
+  ///
+  /// El bloc es compartido con el detalle: al abrir una receta pasa por
+  /// `RecipeDetailLoading`, que no transporta lista, y sin cachearla el Home
+  /// mostraba el estado vacío debajo de la pantalla empujada.
+  List<Recipe>? _recipes;
+
+  /// La lista que transporta el estado, si transporta alguna.
+  List<Recipe>? _listaDe(RecipeState state) {
+    return switch (state) {
+      RecipeListLoaded(:final recipes) => recipes,
+      RecipeDetailLoaded(:final recipes) => recipes,
+      _ => null,
+    };
+  }
+
   @override
   void initState() {
     super.initState();
-    context.read<RecipeBloc>().add(const LoadHomeRecipes());
-    context.read<CategoryBloc>().add(LoadCategories());
+    _cargar();
   }
 
-  void _onRefresh() {
+  @override
+  void dispose() {
+    _refreshController.dispose();
+    super.dispose();
+  }
+
+  void _cargar() {
     context.read<RecipeBloc>().add(const LoadHomeRecipes());
     context.read<CategoryBloc>().add(LoadCategories());
   }
@@ -35,155 +58,168 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-          appBar: AppBar(
-            title: const Text('Papeeta', style: TextStyle(color: Colors.white)),
-            elevation: 1,
-            backgroundColor: Theme.of(context).colorScheme.onPrimary,
-            leading: Builder(
-              builder: (context) => IconButton(
-                icon: const Icon(Icons.menu, color: Colors.white),
-                onPressed: () => Scaffold.of(context).openDrawer(),
+      appBar: AppBar(title: const Text('Papeeta')),
+      drawer: const CustomDrawer(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.push('/addRecipe'),
+        tooltip: 'Agregar receta',
+        child: const Icon(Icons.post_add_rounded),
+      ),
+      body: BlocListener<RecipeBloc, RecipeState>(
+        listener: (context, state) {
+          final lista = _listaDe(state);
+          if (lista != null) setState(() => _recipes = lista);
+
+          switch (state) {
+            case RecipeListLoaded():
+              _refreshController.refreshCompleted();
+            case RecipeError():
+              _refreshController.refreshFailed();
+            default:
+              break;
+          }
+        },
+        child: BlocBuilder<CategoryBloc, CategoryState>(
+          builder: (context, categoryState) {
+            return BlocBuilder<RecipeBloc, RecipeState>(
+              builder: (context, recipeState) {
+                return _body(categoryState, recipeState);
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _body(CategoryState categoryState, RecipeState recipeState) {
+    final recipes = _listaDe(recipeState) ?? _recipes;
+
+    if (categoryState is CategoryError) {
+      return ErrorStateView(
+        title: 'No pudimos cargar las categorías',
+        message: 'Revisá tu conexión e intentá de nuevo.',
+        onRetry: _cargar,
+      );
+    }
+
+    // Un error mientras ya hay lista suele venir del detalle que se acaba de
+    // abrir, no del Home: se sigue mostrando el contenido.
+    if (recipeState is RecipeError && recipes == null) {
+      return ErrorStateView(
+        title: 'No pudimos cargar las recetas',
+        message: 'Revisá tu conexión e intentá de nuevo.',
+        onRetry: _cargar,
+      );
+    }
+
+    if (categoryState is! CategoryLoaded || recipes == null) {
+      return const _HomeSkeleton();
+    }
+
+    final categories = categoryState.categories;
+
+    if (recipes.isEmpty && categories.isEmpty) {
+      return EmptyStateView(
+        icon: Icons.restaurant_menu_rounded,
+        title: 'Todavía no hay recetas',
+        message: 'Agregá tu primera receta y empezá a armar tu recetario.',
+        actionLabel: 'Agregar receta',
+        actionIcon: Icons.post_add_rounded,
+        onAction: () => context.push('/addRecipe'),
+      );
+    }
+
+    return SmartRefresher(
+      controller: _refreshController,
+      enablePullDown: true,
+      onRefresh: _cargar,
+      physics: const BouncingScrollPhysics(),
+      child: CustomScrollView(
+        slivers: [
+          if (categories.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.lg),
+                child: _CategoriesRail(categories: categories),
               ),
             ),
-            automaticallyImplyLeading: false,
-          ),
-          drawer: CustomDrawer(),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () {
-              context.push('/addRecipe');
-            },
-            backgroundColor: Theme.of(context).colorScheme.onPrimary,
-            child: Icon(Icons.post_add, color: Colors.white),
-          ),
-          body: BlocListener<RecipeBloc, RecipeState>(
-            listener: (context, recipeState) {
-              switch (recipeState) {
-                case RecipeListLoaded():
-                  _refreshController.refreshCompleted();
-                case RecipeError():
-                  _refreshController.refreshFailed();
-                default:
-                  break;
-              }
-            },
-            child: BlocBuilder<CategoryBloc, CategoryState>(
-              builder: (context, categoryState) {
-                return BlocBuilder<RecipeBloc, RecipeState>(
-                  builder: (context, recipeState) {
-                    if (categoryState is CategoryLoading ||
-                        categoryState is CategoryInitial ||
-                        recipeState is RecipeInitial ||
-                        recipeState is RecipeListLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    if (categoryState is CategoryError) {
-                      return Center(child: Text(categoryState.message));
-                    }
-
-                    if (recipeState is RecipeError) {
-                      return Center(child: Text(recipeState.message));
-                    }
-
-                    if (categoryState is CategoryLoaded) {
-                      final categories = categoryState.categories;
-                      final recipes = switch (recipeState) {
-                        RecipeListLoaded(:final recipes) => recipes,
-                        RecipeDetailLoaded(:final recipes) => recipes,
-                        _ => <Recipe>[],
-                      };
-
-                      if (categories.isEmpty && recipes.isEmpty) {
-                        return const Center(
-                          child: Text(
-                            'No se encontraron recetas ni categorías',
-                          ),
-                        );
-                      }
-
-                      return SmartRefresher(
-                        controller: _refreshController,
-                        enablePullDown: true,
-                        onRefresh: _onRefresh,
-                        physics: const BouncingScrollPhysics(),
-                        child: ListView(
-                          padding: const EdgeInsets.only(top: 20),
-                          children: [
-                            if (categories.isNotEmpty)
-                              _CategoriesList(categories: categories),
-                            const SizedBox(height: 20),
-                            if (recipes.isNotEmpty)
-                              RecipeList(recipes: recipes)
-                            else
-                              const Center(
-                                child: Text('No se encontraron recetas.'),
-                              ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return const SizedBox.shrink();
-                  },
-                );
-              },
+          if (recipes.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: EmptyStateView(
+                icon: Icons.restaurant_menu_rounded,
+                title: 'Todavía no hay recetas',
+                message:
+                    'Agregá tu primera receta y empezá a armar tu recetario.',
+                actionLabel: 'Agregar receta',
+                actionIcon: Icons.post_add_rounded,
+                onAction: () => context.push('/addRecipe'),
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                0,
+                AppSpacing.lg,
+                AppSpacing.xxxl * 2,
+              ),
+              sliver: SliverList.separated(
+                itemCount: recipes.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: AppSpacing.lg),
+                itemBuilder: (context, index) {
+                  final recipe = recipes[index];
+                  return RecipeCard(
+                    recipe: recipe,
+                    onTap: () => context.push('/recipe/${recipe.id}'),
+                  );
+                },
+              ),
             ),
-          ),
-        );
+        ],
+      ),
+    );
   }
 }
 
-class _CategoriesList extends StatefulWidget {
-  const _CategoriesList({required this.categories});
+/// Carrusel de categorías. Orden estable: el diseño retira el shuffle aleatorio
+/// que impedía la memoria visual entre sesiones.
+class _CategoriesRail extends StatelessWidget {
+  const _CategoriesRail({required this.categories});
+
   final List<Category> categories;
 
   @override
-  State<_CategoriesList> createState() => _CategoriesListState();
-}
-
-class _CategoriesListState extends State<_CategoriesList> {
-  late List<Category> limitedCategories;
-
-  @override
-  void initState() {
-    super.initState();
-    _shuffleCategories();
-  }
-
-  @override
-  void didUpdateWidget(covariant _CategoriesList oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.categories != widget.categories) {
-      _shuffleCategories();
-    }
-  }
-
-  void _shuffleCategories() {
-    final filtered = widget.categories.where((c) => c.groupId != 2).toList();
-    filtered.shuffle();
-    limitedCategories = filtered.take(8).toList();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    // El grupo 2 queda fuera del rail, como en la versión anterior.
+    final visible = categories.where((c) => c.groupId != 2).take(8).toList();
+
     return SizedBox(
-      height: 114,
-      child: ListView.builder(
-        itemCount: limitedCategories.length + 1,
+      height: 104,
+      child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 15),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        itemCount: visible.length + 1,
+        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.lg),
         itemBuilder: (context, index) {
-          if (index < limitedCategories.length) {
+          if (index == visible.length) {
             return _CategoryItem(
-              category: limitedCategories[index],
-              label: limitedCategories[index].name,
-              imageUrl: limitedCategories[index].imageUrl,
+              label: 'Ver todas',
+              icon: Icons.arrow_forward_rounded,
+              onTap: () => context.push('/categories'),
             );
           }
 
-          return const _CategoryItem(
-            label: 'Ver todas',
-            icon: Icons.arrow_forward,
+          final category = visible[index];
+          return _CategoryItem(
+            label: category.name,
+            imageUrl: category.imageUrl,
+            onTap: () {
+              context.read<RecipeBloc>().add(LoadRecipesByCategory(category.id));
+              context.push('/categories/${category.id}', extra: category);
+            },
           );
         },
       ),
@@ -194,78 +230,115 @@ class _CategoriesListState extends State<_CategoriesList> {
 class _CategoryItem extends StatelessWidget {
   const _CategoryItem({
     required this.label,
+    required this.onTap,
     this.imageUrl,
     this.icon,
-    this.category,
   });
 
-  final Category? category;
   final String label;
+  final VoidCallback onTap;
   final String? imageUrl;
   final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        GestureDetector(
-          onTap: () {
-            if (category != null) {
-              context.read<RecipeBloc>().add(
-                LoadRecipesByCategory(category!.id),
-              );
+    final colors = context.colors;
+    final hasImage = imageUrl != null && imageUrl!.isNotEmpty;
 
-              context.push('/categories/${category!.id}', extra: category);
-            } else {
-              context.push('/categories');
-            }
-          },
-          child: Container(
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 3,
-                  spreadRadius: 0.3,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: CircleAvatar(
-              radius: 35,
-              backgroundColor: Colors.white,
-              child: imageUrl != null && imageUrl!.isNotEmpty
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 72,
+        child: Column(
+          children: [
+            Container(
+              width: AppSizes.categoryCircle,
+              height: AppSizes.categoryCircle,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: colors.primaryContainer,
+                shape: BoxShape.circle,
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: hasImage
                   ? Padding(
-                      padding: const EdgeInsets.all(8.0),
+                      padding: const EdgeInsets.all(AppSpacing.sm + 2),
                       child: CachedNetworkImage(
                         imageUrl: imageUrl!,
-                        fit: BoxFit.cover,
-                        width: 70,
-                        height: 70,
-                        placeholder: (context, url) => const Padding(
-                          padding: EdgeInsets.all(12.0),
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                        fit: BoxFit.contain,
+                        errorWidget: (_, __, ___) => Icon(
+                          Icons.restaurant_menu_rounded,
+                          size: 26,
+                          color: colors.primary,
                         ),
-                        errorWidget: (context, url, error) =>
-                            const Icon(Icons.broken_image, color: Colors.grey),
                       ),
                     )
-                  : Icon(icon, color: Colors.black54, size: 30),
+                  : Icon(
+                      icon ?? Icons.restaurant_menu_rounded,
+                      size: 26,
+                      color: colors.primary,
+                    ),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              label,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.label.copyWith(
+                fontSize: 11,
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeSkeleton extends StatelessWidget {
+  const _HomeSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Skeletonized(
+      child: ListView(
+        padding: const EdgeInsets.only(top: AppSpacing.lg),
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          SizedBox(
+            height: 104,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              itemCount: 5,
+              separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.lg),
+              itemBuilder: (_, __) => const SizedBox(
+                width: 72,
+                child: Column(
+                  children: [
+                    SkeletonBox.circle(size: AppSizes.categoryCircle),
+                    SizedBox(height: 7),
+                    SkeletonBox.line(width: 44, height: 9),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: 88,
-          child: Text(
-            label,
-            maxLines: 2,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+          const SizedBox(height: AppSpacing.sm),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: Column(
+              children: [
+                RecipeCardSkeleton(),
+                SizedBox(height: AppSpacing.lg),
+                RecipeCardSkeleton(),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

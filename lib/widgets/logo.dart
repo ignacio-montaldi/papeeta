@@ -1,21 +1,32 @@
 import 'package:flutter/material.dart';
 
-class Logo extends StatelessWidget {
-  final String titulo;
+import 'package:papeeta/core/theme/theme.dart';
 
+/// Logo de marca de las pantallas de autenticación.
+class Logo extends StatelessWidget {
   const Logo({super.key, required this.titulo});
+
+  final String titulo;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Center(
-      child: Container(
-        margin: const EdgeInsets.only(top: 50),
-        width: 170,
+      child: Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.xxxl),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Image(image: AssetImage('images/app_icon/launcher_icon.png')),
-            const SizedBox(height: 20),
-            Text(titulo, style: const TextStyle(fontSize: 30)),
+            SizedBox(
+              width: 140,
+              child: Image.asset('images/app_icon/launcher_icon.png'),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              titulo,
+              style: AppTypography.display.copyWith(color: colors.primary),
+            ),
           ],
         ),
       ),

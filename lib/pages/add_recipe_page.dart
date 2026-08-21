@@ -1,16 +1,18 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_speed_dial/flutter_speed_dial.dart';
-import 'package:papeeta/features/ingredients/presentation/bloc/ingredient_bloc.dart';
-import 'package:papeeta/features/recipes/presentation/bloc/recipe_form/recipe_form_cubit.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:papeeta/core/theme/theme.dart';
 import 'package:papeeta/features/categories/presentation/bloc/category_bloc.dart';
+import 'package:papeeta/features/ingredients/presentation/bloc/ingredient_bloc.dart';
 import 'package:papeeta/features/recipes/domain/entities/ingredient.dart';
 import 'package:papeeta/features/recipes/domain/entities/ingredient_unit.dart';
 import 'package:papeeta/features/recipes/domain/entities/preparation_step.dart';
+import 'package:papeeta/features/recipes/presentation/bloc/recipe_form/recipe_form_cubit.dart';
 import 'package:papeeta/widgets/category_selector_sheet.dart';
+import 'package:papeeta/widgets/ds/ds.dart';
 import 'package:papeeta/widgets/image_source_sheet.dart';
 
 class AddRecipePage extends StatefulWidget {
@@ -23,13 +25,13 @@ class AddRecipePage extends StatefulWidget {
 class _AddRecipePageState extends State<AddRecipePage> {
   final _formKey = GlobalKey<FormState>();
 
-  List<IngredientUnit> units = [];
+  List<IngredientUnit> _units = [];
 
   @override
   void initState() {
+    super.initState();
     context.read<IngredientBloc>().add(LoadUnitsEvent());
     context.read<CategoryBloc>().add(const LoadCategories());
-    super.initState();
   }
 
   @override
@@ -37,230 +39,346 @@ class _AddRecipePageState extends State<AddRecipePage> {
     return BlocListener<RecipeFormCubit, RecipeFormState>(
       listenWhen: (prev, curr) =>
           prev.submitSuccess != curr.submitSuccess ||
-          prev.submitError != curr.submitError,
+          prev.submitError != curr.submitError ||
+          prev.errors != curr.errors,
       listener: (context, state) {
         if (state.submitSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Receta guardada correctamente')),
+          showAppSnackBar(
+            context,
+            message: 'Receta guardada',
+            intent: SnackIntent.success,
           );
-
           context.pop();
+          return;
         }
 
         if (state.submitError != null) {
-          ScaffoldMessenger.of(
+          showAppSnackBar(
             context,
-          ).showSnackBar(SnackBar(content: Text(state.submitError!)));
+            message: state.submitError!,
+            intent: SnackIntent.error,
+            actionLabel: 'Reintentar',
+            onAction: () => context.read<RecipeFormCubit>().submit(),
+          );
+          return;
+        }
+
+        if (state.errors.isNotEmpty) {
+          showAppSnackBar(
+            context,
+            message: 'Revisá los campos marcados',
+            intent: SnackIntent.error,
+          );
         }
       },
       child: BlocBuilder<RecipeFormCubit, RecipeFormState>(
         builder: (context, formState) {
-          return Stack(
-            children: [
-              PopScope(
-                canPop: false,
-                onPopInvokedWithResult: (didPop, result) async {
-                  if (didPop) return;
+          return PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (didPop, _) async {
+              if (didPop) return;
+              final salir = await _confirmarSalida(context);
+              if (salir && context.mounted) Navigator.of(context).pop();
+            },
+            child: Scaffold(
+              appBar: _appBar(context, formState),
+              body: SafeArea(
+                child: Stack(
+                  children: [
+                    _contenido(formState),
+                    if (formState.isSubmitting) _overlayGuardando(),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 
-                  final shouldExit = await _showExitDialog(context);
-                  if (shouldExit && context.mounted) {
-                    Navigator.of(context).pop();
-                  }
-                },
-                child: Scaffold(
-                  appBar: AppBar(
-                    title: const Text('Agregar receta'),
-                    backgroundColor: Theme.of(context).colorScheme.onPrimary,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                  ),
+  PreferredSizeWidget _appBar(BuildContext context, RecipeFormState formState) {
+    final colors = context.colors;
+    final vacio = formState.title.trim().isEmpty &&
+        formState.ingredients.isEmpty &&
+        formState.steps.isEmpty &&
+        formState.images.isEmpty;
 
-                  body: SafeArea(
-                    child: BlocBuilder<IngredientBloc, IngredientState>(
-                      builder: (context, state) {
-                        if (state is IngredientLoading) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        } else if (state is IngredientUnitsLoaded) {
-                          units = state.units;
-
-                          return Form(
-                            key: _formKey,
-                            child: SingleChildScrollView(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const _RecipeName(),
-                                  const SizedBox(height: 20),
-                                  const _RecipeSubtitle(),
-                                  const SizedBox(height: 20),
-                                  const _RecipeSourceLink(),
-                                  const SizedBox(height: 20),
-                                  const _RecipeCategoriesField(),
-                                  const SizedBox(height: 20),
-                                  BlocBuilder<RecipeFormCubit, RecipeFormState>(
-                                    builder: (context, state) {
-                                      return _RecipeIngredients(
-                                        ingredients: state.ingredients,
-                                        ingredientUiKeys:
-                                            state.ingredientUiKeys,
-                                        units: units,
-                                      );
-                                    },
-                                  ),
-                                  const SizedBox(height: 20),
-                                  BlocBuilder<RecipeFormCubit, RecipeFormState>(
-                                    builder: (context, state) {
-                                      return _RecipeSteps(
-                                        steps: state.steps,
-                                        stepUiKeys: state.stepUiKeys,
-                                      );
-                                    },
-                                  ),
-                                  const SizedBox(height: 20),
-                                  BlocBuilder<RecipeFormCubit, RecipeFormState>(
-                                    builder: (context, state) {
-                                      if (state.images.isEmpty) {
-                                        return const SizedBox();
-                                      }
-
-                                      return SizedBox(
-                                        height: 110,
-                                        child: ListView.separated(
-                                          scrollDirection: Axis.horizontal,
-                                          itemCount: state.images.length,
-                                          separatorBuilder: (_, __) =>
-                                              const SizedBox(width: 12),
-                                          itemBuilder: (context, index) {
-                                            return _ImageThumbnail(
-                                              image: state.images[index].file,
-                                              onRemove: () => context
-                                                  .read<RecipeFormCubit>()
-                                                  .removeImage(index),
-                                            );
-                                          },
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                  BlocBuilder<RecipeFormCubit, RecipeFormState>(
-                                    builder: (context, state) {
-                                      return Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          if (state.errors.containsKey(
-                                            'images',
-                                          ))
-                                            Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    vertical: 8,
-                                                  ),
-                                              child: Text(
-                                                state.errors['images']!,
-                                                style: const TextStyle(
-                                                  color: Colors.red,
-                                                ),
-                                              ),
-                                            ),
-                                          OutlinedButton.icon(
-                                            onPressed: () => ImageSourceSheet.show(
-                                              context,
-                                              onImageSourceSelected: (source) {
-                                                context.read<RecipeFormCubit>().pickImage(source);
-                                              },
-                                            ),
-                                            icon: const Icon(
-                                              Icons.add_a_photo_outlined,
-                                            ),
-                                            label: const Text('Agregar imagen'),
-                                            style: OutlinedButton.styleFrom(
-                                              foregroundColor: Theme.of(
-                                                context,
-                                              ).colorScheme.onPrimary,
-                                              side: BorderSide(
-                                                color: Theme.of(
-                                                  context,
-                                                ).colorScheme.onPrimary,
-                                              ),
-                                              minimumSize: const Size(
-                                                double.infinity,
-                                                50,
-                                              ),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        } else if (state is IngredientError) {
-                          return Text('Error: ${state.message}');
-                        }
-                        return const Text('Error inesperado');
-                      },
-                    ),
-                  ),
-                  floatingActionButton: SpeedDial(
-                    icon: Icons.save_as,
-                    activeIcon: Icons.close,
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
-                    spacing: 12,
-                    children: [
-                      SpeedDialChild(
-                        child: const Icon(Icons.check),
-                        label: 'Guardar',
-                        backgroundColor: Theme.of(
-                          context,
-                        ).colorScheme.onPrimary,
-                        foregroundColor: Colors.white,
-                        shape: const CircleBorder(),
-                        onTap: () => context.read<RecipeFormCubit>().submit(),
-                      ),
-                      SpeedDialChild(
-                        child: const Icon(Icons.remove_red_eye),
-                        label: 'Preview',
-                        backgroundColor: Theme.of(
-                          context,
-                        ).colorScheme.onPrimary,
-                        foregroundColor: Colors.white,
-                        shape: const CircleBorder(),
-                        onTap: () {
-                          final cubit = context.read<RecipeFormCubit>();
-                          cubit.validateForm();
-                          if (!cubit.state.isValid) return;
-                          context.push(
-                            '/preview',
-                            extra: {
-                              'recipe': cubit.buildRecipe(),
-                              'images': cubit.state.images
-                                  .map((img) => img.file)
-                                  .toList(),
-                            },
-                          );
-                        },
-                      ),
-                    ],
+    return AppBar(
+      leading: IconButton(
+        icon: const Icon(Icons.close_rounded),
+        onPressed: formState.isSubmitting ? null : () => Navigator.maybePop(context),
+        tooltip: 'Cancelar',
+      ),
+      title: const Text('Nueva receta'),
+      actions: formState.isSubmitting
+          ? const []
+          : [
+              IconButton(
+                icon: const Icon(Icons.visibility_outlined),
+                tooltip: 'Vista previa',
+                onPressed: () => _abrirPreview(context),
+              ),
+              TextButton(
+                onPressed: () => context.read<RecipeFormCubit>().submit(),
+                child: Text(
+                  'Guardar',
+                  style: AppTypography.button.copyWith(
+                    fontSize: 14,
+                    color: colors.onPrimary.withValues(alpha: vacio ? 0.5 : 1),
                   ),
                 ),
               ),
-              if (formState.isSubmitting)
-                Container(
-                  color: Colors.black.withAlpha(90),
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
+              const SizedBox(width: AppSpacing.sm),
             ],
+    );
+  }
+
+  Widget _contenido(RecipeFormState formState) {
+    return BlocBuilder<IngredientBloc, IngredientState>(
+      builder: (context, state) {
+        if (state is IngredientLoading || state is IngredientInitial) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (state is IngredientError) {
+          return ErrorStateView(
+            title: 'No pudimos cargar las unidades',
+            message: 'Sin ellas no se puede cargar una receta. Probá de nuevo.',
+            onRetry: () => context.read<IngredientBloc>().add(LoadUnitsEvent()),
+          );
+        }
+
+        if (state is! IngredientUnitsLoaded) return const SizedBox.shrink();
+        _units = state.units;
+
+        return AnimatedOpacity(
+          duration: AppMotion.base,
+          opacity: formState.isSubmitting ? 0.5 : 1,
+          child: IgnorePointer(
+            ignoring: formState.isSubmitting,
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  AppSpacing.xxxl * 2,
+                ),
+                children: [
+                  _ImagesField(images: formState.images, error: formState.errors['images']),
+                  const SizedBox(height: AppSpacing.lg),
+                  _TitleField(error: formState.errors['title']),
+                  const SizedBox(height: AppSpacing.lg),
+                  const _SubtitleField(),
+                  const SizedBox(height: AppSpacing.lg),
+                  _SourceField(error: formState.errors['link']),
+                  const SizedBox(height: AppSpacing.xl),
+                  _CategoriesField(error: formState.errors['categories']),
+                  const SizedBox(height: AppSpacing.xl),
+                  _IngredientsSection(
+                    ingredients: formState.ingredients,
+                    uiKeys: formState.ingredientUiKeys,
+                    units: _units,
+                    errors: formState.errors,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  _StepsSection(
+                    steps: formState.steps,
+                    uiKeys: formState.stepUiKeys,
+                    errors: formState.errors,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _overlayGuardando() {
+    return Positioned.fill(
+      child: ColoredBox(
+        color: context.colors.surface.withValues(alpha: 0.35),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: AppButton(
+              label: 'Guardando receta…',
+              isLoading: true,
+              onPressed: null,
+              height: AppSizes.buttonHeightLarge,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _abrirPreview(BuildContext context) {
+    final cubit = context.read<RecipeFormCubit>();
+    cubit.validateForm();
+    if (!cubit.state.isValid) return;
+
+    context.push(
+      '/preview',
+      extra: {
+        'recipe': cubit.buildRecipe(),
+        'images': cubit.state.images.map((img) => img.file).toList(),
+      },
+    );
+  }
+}
+
+// ---------------------------------------------------------------- campos ---
+
+class _TitleField extends StatelessWidget {
+  const _TitleField({this.error});
+
+  final String? error;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppTextField(
+      label: 'Nombre de la receta',
+      hint: 'Ej. Ñoquis de papa',
+      errorText: error,
+      textCapitalization: TextCapitalization.sentences,
+      onChanged: (value) => context.read<RecipeFormCubit>().setTitle(value),
+    );
+  }
+}
+
+class _SubtitleField extends StatelessWidget {
+  const _SubtitleField();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppTextField(
+      label: 'Subtítulo',
+      hint: 'Ej. El clásico de los domingos',
+      maxLines: 3,
+      minLines: 1,
+      textCapitalization: TextCapitalization.sentences,
+      onChanged: (value) =>
+          context.read<RecipeFormCubit>().setDescription(value),
+    );
+  }
+}
+
+class _SourceField extends StatelessWidget {
+  const _SourceField({this.error});
+
+  final String? error;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppTextField(
+      label: 'Fuente',
+      hint: 'https://www.ejemplo.com',
+      icon: Icons.link_rounded,
+      keyboardType: TextInputType.url,
+      errorText: error,
+      onChanged: (value) => context.read<RecipeFormCubit>().setSourceLink(value),
+    );
+  }
+}
+
+/// Zona de fotos: recuadro punteado vacío, o fila de miniaturas + "agregar".
+class _ImagesField extends StatelessWidget {
+  const _ImagesField({required this.images, this.error});
+
+  final List<dynamic> images;
+  final String? error;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final semantic = context.semantic;
+    final hasError = error != null;
+
+    void elegirFoto() {
+      ImageSourceSheet.show(
+        context,
+        onImageSourceSelected: (source) =>
+            context.read<RecipeFormCubit>().pickImage(source),
+      );
+    }
+
+    if (images.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            onTap: elegirFoto,
+            child: Container(
+              height: 96,
+              decoration: BoxDecoration(
+                color: hasError ? AppColors.errorFieldFill : semantic.dashedFill,
+                borderRadius: AppRadius.lgAll,
+                border: Border.all(
+                  color: hasError ? colors.error : semantic.dashedBorder,
+                  width: 1.5,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.add_a_photo_outlined,
+                    size: 28,
+                    color: hasError ? colors.error : colors.onSurfaceVariant,
+                  ),
+                  const SizedBox(height: AppSpacing.sm - 2),
+                  Text(
+                    error ?? 'Agregar foto',
+                    style: AppTypography.label.copyWith(
+                      fontSize: 12,
+                      color: hasError ? colors.error : colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return SizedBox(
+      height: 64,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: images.length + 1,
+        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.sm),
+        itemBuilder: (context, index) {
+          if (index == images.length) {
+            return GestureDetector(
+              onTap: elegirFoto,
+              child: Container(
+                width: 64,
+                height: 64,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: semantic.dashedFill,
+                  borderRadius: AppRadius.mdAll,
+                  border: Border.all(color: semantic.dashedBorder, width: 1.5),
+                ),
+                child: Icon(
+                  Icons.add_rounded,
+                  size: 22,
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+            );
+          }
+
+          return _Thumbnail(
+            file: images[index].file as File,
+            onRemove: () => context.read<RecipeFormCubit>().removeImage(index),
           );
         },
       ),
@@ -268,403 +386,37 @@ class _AddRecipePageState extends State<AddRecipePage> {
   }
 }
 
-class _RecipeName extends StatelessWidget {
-  const _RecipeName();
+class _Thumbnail extends StatelessWidget {
+  const _Thumbnail({required this.file, required this.onRemove});
 
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<RecipeFormCubit, RecipeFormState>(
-      builder: (context, state) {
-        return TextFormField(
-          decoration: InputDecoration(
-            labelText: 'Nombre de la receta',
-            prefixIcon: const Icon(Icons.fastfood_outlined),
-            border: const OutlineInputBorder(),
-            errorText: state.errors['title'],
-          ),
-          onChanged: (value) => context.read<RecipeFormCubit>().setTitle(value),
-        );
-      },
-    );
-  }
-}
-
-class _RecipeSubtitle extends StatelessWidget {
-  const _RecipeSubtitle();
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      maxLines: 3,
-      decoration: const InputDecoration(
-        labelText: 'Subtítulo',
-        hintText: 'Breve descripción',
-        alignLabelWithHint: true,
-        prefixIcon: Icon(Icons.description_outlined),
-        border: OutlineInputBorder(),
-      ),
-      onChanged: (value) =>
-          context.read<RecipeFormCubit>().setDescription(value),
-    );
-  }
-}
-
-class _RecipeSourceLink extends StatelessWidget {
-  const _RecipeSourceLink();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<RecipeFormCubit, RecipeFormState>(
-      builder: (context, state) {
-        return TextFormField(
-          decoration: InputDecoration(
-            labelText: 'Fuente',
-            hintText: 'https://www.ejemplo.com',
-            prefixIcon: const Icon(Icons.link),
-            border: const OutlineInputBorder(),
-            errorText: state.errors['link'],
-          ),
-          onChanged: (value) =>
-              context.read<RecipeFormCubit>().setSourceLink(value),
-        );
-      },
-    );
-  }
-}
-
-class _RecipeIngredients extends StatelessWidget {
-  final List<Ingredient> ingredients;
-  final List<int> ingredientUiKeys;
-  final List<IngredientUnit> units;
-
-  const _RecipeIngredients({
-    required this.ingredients,
-    required this.ingredientUiKeys,
-    required this.units,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cubit = context.read<RecipeFormCubit>();
-    return BlocBuilder<RecipeFormCubit, RecipeFormState>(
-      builder: (context, state) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (state.errors.containsKey('ingredients'))
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  state.errors['ingredients']!,
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ),
-            Text(
-              'Ingredientes',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSecondary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ReorderableListView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              onReorder: (oldIndex, newIndex) {
-                context.read<RecipeFormCubit>().reorderIngredients(
-                  oldIndex,
-                  newIndex,
-                );
-              },
-              children: [
-                for (int index = 0; index < ingredients.length; index++)
-                  _IngredientCard(
-                    key: ValueKey(ingredientUiKeys[index]),
-                    index: index,
-                    ingredient: ingredients[index],
-                    units: units,
-                    cubit: cubit,
-                  ),
-              ],
-            ),
-            OutlinedButton.icon(
-              onPressed: () => context.read<RecipeFormCubit>().addIngredient(),
-              icon: const Icon(Icons.add),
-              label: const Text('Agregar ingrediente'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                side: BorderSide(
-                  color: Theme.of(context).colorScheme.onPrimary,
-                ),
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _IngredientCard extends StatelessWidget {
-  final int index;
-  final Ingredient ingredient;
-  final List<IngredientUnit> units;
-  final RecipeFormCubit cubit;
-
-  const _IngredientCard({
-    super.key,
-    required this.index,
-    required this.ingredient,
-    required this.units,
-    required this.cubit,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<RecipeFormCubit, RecipeFormState>(
-      builder: (context, state) {
-        return Card(
-          key: ValueKey(index.toString()),
-          elevation: 1,
-          margin: const EdgeInsets.only(bottom: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 5, 16, 16),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.drag_handle, color: Colors.grey),
-                        const SizedBox(width: 8),
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: Theme.of(
-                            context,
-                          ).colorScheme.onPrimary,
-                          foregroundColor: Colors.white,
-                          child: Text('${index + 1}'),
-                        ),
-                      ],
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () => context
-                          .read<RecipeFormCubit>()
-                          .removeIngredient(index),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                TextFormField(
-                  initialValue: ingredient.amount?.toString() ?? '',
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: 'Cantidad',
-                    prefixIcon: const Icon(Icons.numbers),
-                    border: const OutlineInputBorder(),
-                    errorText: state.errors['ingredient_amount_$index'],
-                  ),
-                  onChanged: (v) =>
-                      cubit.updateIngredient(index, amount: double.tryParse(v)),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<IngredientUnit>(
-                  initialValue: ingredient.unit,
-                  items: units.map((u) {
-                    return DropdownMenuItem(value: u, child: Text(u.name));
-                  }).toList(),
-                  decoration: InputDecoration(
-                    labelText: 'Unidad',
-                    prefixIcon: const Icon(Icons.straighten),
-                    border: const OutlineInputBorder(),
-                    errorText: state.errors['ingredient_unit_$index'],
-                  ),
-                  onChanged: (u) => cubit.updateIngredient(index, unit: u),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  initialValue: ingredient.name,
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre del ingrediente',
-                    hintText: 'En singular. Ej: Huevo',
-                    prefixIcon: Icon(Icons.rice_bowl_outlined),
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (v) => cubit.updateIngredient(index, name: v),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _RecipeSteps extends StatelessWidget {
-  final List<PreparationStep> steps;
-  final List<int> stepUiKeys;
-
-  const _RecipeSteps({required this.steps, required this.stepUiKeys});
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<RecipeFormCubit, RecipeFormState>(
-      builder: (context, state) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (state.errors.containsKey('steps'))
-              Text(
-                state.errors['steps']!,
-                style: const TextStyle(color: Colors.red),
-              ),
-            Text(
-              'Pasos de preparación',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSecondary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            ReorderableListView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              onReorder: (oldIndex, newIndex) {
-                context.read<RecipeFormCubit>().reorderSteps(
-                  oldIndex,
-                  newIndex,
-                );
-              },
-              children: [
-                for (int index = 0; index < steps.length; index++)
-                  Card(
-                    key: ValueKey(stepUiKeys[index]),
-                    elevation: 1,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.drag_handle,
-                                    color: Colors.grey,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  CircleAvatar(
-                                    radius: 18,
-                                    backgroundColor: Theme.of(
-                                      context,
-                                    ).colorScheme.onPrimary,
-                                    foregroundColor: Colors.white,
-                                    child: Text('${steps[index].order}'),
-                                  ),
-                                ],
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                onPressed: () => context
-                                    .read<RecipeFormCubit>()
-                                    .removeStep(index),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: TextFormField(
-                                  initialValue: steps[index].description,
-                                  maxLines: null,
-                                  decoration: InputDecoration(
-                                    labelText: 'Descripción del paso',
-                                    border: const OutlineInputBorder(),
-                                    errorText: state.errors['step_$index'],
-                                  ),
-                                  onChanged: (v) => context
-                                      .read<RecipeFormCubit>()
-                                      .updateStep(index, v),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            OutlinedButton.icon(
-              onPressed: () => context.read<RecipeFormCubit>().addStep(),
-              icon: const Icon(Icons.add),
-              label: const Text('Agregar paso de preparación'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                side: BorderSide(
-                  color: Theme.of(context).colorScheme.onPrimary,
-                ),
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _ImageThumbnail extends StatelessWidget {
-  final File image;
+  final File file;
   final VoidCallback onRemove;
 
-  const _ImageThumbnail({required this.image, required this.onRemove});
-
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return Stack(
+      clipBehavior: Clip.none,
       children: [
         ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Image.file(image, width: 96, height: 96, fit: BoxFit.cover),
+          borderRadius: AppRadius.mdAll,
+          child: Image.file(file, width: 64, height: 64, fit: BoxFit.cover),
         ),
         Positioned(
-          top: 4,
-          right: 4,
+          top: -5,
+          right: -5,
           child: GestureDetector(
             onTap: onRemove,
             child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.black54,
+              width: 20,
+              height: 20,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: colors.error,
                 shape: BoxShape.circle,
               ),
-              padding: const EdgeInsets.all(4),
-              child: const Icon(Icons.close, size: 16, color: Colors.white),
+              child: Icon(Icons.close_rounded, size: 13, color: colors.onError),
             ),
           ),
         ),
@@ -673,134 +425,591 @@ class _ImageThumbnail extends StatelessWidget {
   }
 }
 
-class _RecipeCategoriesField extends StatelessWidget {
-  const _RecipeCategoriesField();
+class _CategoriesField extends StatelessWidget {
+  const _CategoriesField({this.error});
+
+  final String? error;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+
     return BlocBuilder<RecipeFormCubit, RecipeFormState>(
       builder: (context, state) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Categorías',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSecondary,
-              ),
+            _SectionHeader(
+              title: 'Categorías',
+              onAdd: () => _abrirSelector(context),
+              addIcon: Icons.edit_rounded,
             ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: state.categories.map((category) {
-                final selected = state.categories.any(
-                  (c) => c.id == category.id,
-                );
-                return IgnorePointer(
-                  child: FilterChip(
-                    label: Text(category.name),
-                    selected: selected,
-                    onSelected: (_) {},
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: () => _openCategorySelector(context),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                side: BorderSide(
-                  color: Theme.of(context).colorScheme.onPrimary,
+            const SizedBox(height: AppSpacing.md),
+            if (state.categories.isEmpty)
+              Text(
+                'Elegí al menos una categoría',
+                style: AppTypography.label.copyWith(
+                  fontSize: 12,
+                  color: colors.onSurfaceVariant,
                 ),
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Row(
+              )
+            else
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
                 children: [
-                  Expanded(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.category_outlined),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Seleccionar categorías',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                  for (final category in state.categories)
+                    AppChip(
+                      label: category.name,
+                      selected: true,
+                      onTap: () => context
+                          .read<RecipeFormCubit>()
+                          .toggleCategory(category),
                     ),
-                  ),
-                  const Icon(Icons.edit_outlined),
                 ],
               ),
-            ),
-            if (state.errors.containsKey('categories'))
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  state.errors['categories']!,
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ),
+            if (error != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              _FieldError(message: error!),
+            ],
           ],
         );
       },
     );
   }
 
-  void _openCategorySelector(BuildContext context) {
-    final formCubit = context.read<RecipeFormCubit>();
-
-    showModalBottomSheet(
+  void _abrirSelector(BuildContext context) {
+    final cubit = context.read<RecipeFormCubit>();
+    showAppBottomSheet(
       context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      builder: (_) => BlocProvider.value(
+        value: cubit,
+        child: const CategorySelectorSheet(),
       ),
-      builder: (_) {
-        return BlocProvider.value(
-          value: formCubit,
-          child: const CategorySelectorSheet(),
-        );
-      },
     );
   }
 }
 
-Future<bool> _showExitDialog(BuildContext context) async {
-  return await showDialog<bool>(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('¿Cancelar receta?'),
-            content: const Text('Si salís ahora, se perderán los cambios.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text(
-                  'Seguir editando',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+// ----------------------------------------------------------- ingredientes --
+
+class _IngredientsSection extends StatelessWidget {
+  const _IngredientsSection({
+    required this.ingredients,
+    required this.uiKeys,
+    required this.units,
+    required this.errors,
+  });
+
+  final List<Ingredient> ingredients;
+  final List<int> uiKeys;
+  final List<IngredientUnit> units;
+  final Map<String, String> errors;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final cubit = context.read<RecipeFormCubit>();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(title: 'Ingredientes', onAdd: cubit.addIngredient),
+        const SizedBox(height: AppSpacing.md),
+        if (ingredients.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              child: Text(
+                'Sumá tu primer ingrediente',
+                style: AppTypography.label.copyWith(
+                  fontSize: 12,
+                  color: colors.onSurfaceVariant,
                 ),
               ),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text(
-                  'Salir',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
+            ),
+          )
+        else
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            buildDefaultDragHandles: false,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: ingredients.length,
+            onReorder: cubit.reorderIngredients,
+            itemBuilder: (context, index) {
+              return Padding(
+                key: ValueKey(uiKeys[index]),
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: _IngredientRow(
+                  index: index,
+                  ingredient: ingredients[index],
+                  units: units,
+                  amountError: errors['ingredient_amount_$index'],
+                  unitError: errors['ingredient_unit_$index'],
+                ),
+              );
+            },
+          ),
+        if (errors.containsKey('ingredients')) ...[
+          const SizedBox(height: AppSpacing.sm),
+          _FieldError(message: errors['ingredients']!),
+        ],
+      ],
+    );
+  }
+}
+
+/// Fila compacta: cantidad · unidad · nombre.
+///
+/// Se mantiene el reordenamiento que tenía la versión anterior, pero con
+/// arrastre por pulsación larga en vez de un handle visible, para no romper la
+/// fila compacta del diseño.
+class _IngredientRow extends StatelessWidget {
+  const _IngredientRow({
+    required this.index,
+    required this.ingredient,
+    required this.units,
+    this.amountError,
+    this.unitError,
+  });
+
+  final int index;
+  final Ingredient ingredient;
+  final List<IngredientUnit> units;
+  final String? amountError;
+  final String? unitError;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final cubit = context.read<RecipeFormCubit>();
+    final hasError = amountError != null || unitError != null;
+
+    return ReorderableDelayedDragStartListener(
+      index: index,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              SizedBox(
+                width: 52,
+                child: _CompactField(
+                  initialValue: ingredient.amount?.toString() ?? '',
+                  hint: 'Cant.',
+                  textAlign: TextAlign.center,
+                  hasError: amountError != null,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  onChanged: (v) =>
+                      cubit.updateIngredient(index, amount: double.tryParse(v)),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm - 2),
+              SizedBox(
+                width: 72,
+                child: _UnitDropdown(
+                  units: units,
+                  value: ingredient.unit,
+                  hasError: unitError != null,
+                  onChanged: (u) => cubit.updateIngredient(index, unit: u),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm - 2),
+              Expanded(
+                child: _CompactField(
+                  initialValue: ingredient.name,
+                  hint: 'Ingrediente',
+                  onChanged: (v) => cubit.updateIngredient(index, name: v),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded, size: 18),
+                color: colors.onSurfaceVariant,
+                visualDensity: VisualDensity.compact,
+                onPressed: () => cubit.removeIngredient(index),
+                tooltip: 'Quitar ingrediente',
+              ),
+            ],
+          ),
+          if (hasError)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xs),
+              child: _FieldError(message: (amountError ?? unitError)!),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _UnitDropdown extends StatelessWidget {
+  const _UnitDropdown({
+    required this.units,
+    required this.value,
+    required this.onChanged,
+    this.hasError = false,
+  });
+
+  final List<IngredientUnit> units;
+  final IngredientUnit? value;
+  final ValueChanged<IngredientUnit?> onChanged;
+  final bool hasError;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: hasError ? AppColors.errorFieldFill : colors.surfaceContainer,
+        borderRadius: const BorderRadius.all(Radius.circular(10)),
+        border: Border.all(
+          color: hasError ? colors.error : colors.outlineVariant,
+          width: 1.5,
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<IngredientUnit>(
+          value: value,
+          isExpanded: true,
+          isDense: true,
+          hint: Text(
+            'Un.',
+            style: AppTypography.body.copyWith(
+              fontSize: 13,
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          icon: Icon(
+            Icons.expand_more_rounded,
+            size: 16,
+            color: colors.onSurfaceVariant,
+          ),
+          style: AppTypography.body.copyWith(
+            fontSize: 13,
+            color: colors.onSurface,
+          ),
+          // En la fila se muestra la abreviatura ("kg"); en el menú, el nombre
+          // completo ("kilogramo"), que es lo que hace falta para elegir.
+          selectedItemBuilder: (context) => [
+            for (final unit in units)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  unit.key,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.body.copyWith(
+                    fontSize: 13,
+                    color: colors.onSurface,
                   ),
                 ),
               ),
-            ],
-          );
-        },
-      ) ??
-      false;
+          ],
+          items: [
+            for (final unit in units)
+              DropdownMenuItem(value: unit, child: Text(unit.name)),
+          ],
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------------ pasos --
+
+class _StepsSection extends StatelessWidget {
+  const _StepsSection({
+    required this.steps,
+    required this.uiKeys,
+    required this.errors,
+  });
+
+  final List<PreparationStep> steps;
+  final List<int> uiKeys;
+  final Map<String, String> errors;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final cubit = context.read<RecipeFormCubit>();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(title: 'Preparación', onAdd: cubit.addStep),
+        const SizedBox(height: AppSpacing.md),
+        if (steps.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              child: Text(
+                'Sumá el primer paso',
+                style: AppTypography.label.copyWith(
+                  fontSize: 12,
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+            ),
+          )
+        else
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            buildDefaultDragHandles: false,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: steps.length,
+            onReorder: cubit.reorderSteps,
+            itemBuilder: (context, index) {
+              return Padding(
+                key: ValueKey(uiKeys[index]),
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: _StepRow(
+                  index: index,
+                  step: steps[index],
+                  error: errors['step_$index'],
+                ),
+              );
+            },
+          ),
+        if (errors.containsKey('steps')) ...[
+          const SizedBox(height: AppSpacing.sm),
+          _FieldError(message: errors['steps']!),
+        ],
+      ],
+    );
+  }
+}
+
+class _StepRow extends StatelessWidget {
+  const _StepRow({required this.index, required this.step, this.error});
+
+  final int index;
+  final PreparationStep step;
+  final String? error;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final cubit = context.read<RecipeFormCubit>();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // El número es también el asa de arrastre.
+            ReorderableDragStartListener(
+              index: index,
+              child: Container(
+                width: 22,
+                height: 22,
+                alignment: Alignment.center,
+                margin: const EdgeInsets.only(top: AppSpacing.sm + 1),
+                decoration: BoxDecoration(
+                  color: colors.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  '${step.order}',
+                  style: AppTypography.label.copyWith(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: colors.onPrimary,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: _CompactField(
+                initialValue: step.description,
+                hint: 'Describí el paso',
+                maxLines: null,
+                hasError: error != null,
+                textCapitalization: TextCapitalization.sentences,
+                onChanged: (v) => cubit.updateStep(index, v),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close_rounded, size: 18),
+              color: colors.onSurfaceVariant,
+              visualDensity: VisualDensity.compact,
+              onPressed: () => cubit.removeStep(index),
+              tooltip: 'Quitar paso',
+            ),
+          ],
+        ),
+        if (error != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 30, top: AppSpacing.xs),
+            child: _FieldError(message: error!),
+          ),
+      ],
+    );
+  }
+}
+
+// ----------------------------------------------------------- compartidos ---
+
+/// Encabezado de sección con botón cuadrado de agregar.
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.title,
+    required this.onAdd,
+    this.addIcon = Icons.add_rounded,
+  });
+
+  final String title;
+  final VoidCallback onAdd;
+  final IconData addIcon;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: AppTypography.title.copyWith(
+            fontSize: 16,
+            color: colors.onSurface,
+          ),
+        ),
+        GestureDetector(
+          onTap: onAdd,
+          child: Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: colors.primaryContainer,
+              borderRadius: const BorderRadius.all(Radius.circular(10)),
+            ),
+            child: Icon(addIcon, size: 19, color: colors.primary),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Campo de texto reducido para las filas de ingredientes y pasos.
+class _CompactField extends StatelessWidget {
+  const _CompactField({
+    required this.initialValue,
+    required this.onChanged,
+    this.hint,
+    this.textAlign = TextAlign.start,
+    this.keyboardType,
+    this.maxLines = 1,
+    this.hasError = false,
+    this.textCapitalization = TextCapitalization.none,
+  });
+
+  final String initialValue;
+  final ValueChanged<String> onChanged;
+  final String? hint;
+  final TextAlign textAlign;
+  final TextInputType? keyboardType;
+  final int? maxLines;
+  final bool hasError;
+  final TextCapitalization textCapitalization;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    return TextFormField(
+      initialValue: initialValue,
+      onChanged: onChanged,
+      textAlign: textAlign,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      textCapitalization: textCapitalization,
+      style: AppTypography.body.copyWith(fontSize: 13, color: colors.onSurface),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: AppTypography.body.copyWith(
+          fontSize: 13,
+          color: colors.onSurfaceVariant.withValues(alpha: 0.7),
+        ),
+        isDense: true,
+        filled: true,
+        fillColor: hasError ? AppColors.errorFieldFill : colors.surfaceContainer,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 10,
+          vertical: AppSpacing.sm + 2,
+        ),
+        border: _borde(colors.outlineVariant),
+        enabledBorder: _borde(hasError ? colors.error : colors.outlineVariant),
+        focusedBorder: _borde(hasError ? colors.error : colors.primary),
+        errorStyle: const TextStyle(height: 0, fontSize: 0),
+      ),
+    );
+  }
+
+  OutlineInputBorder _borde(Color color) {
+    return OutlineInputBorder(
+      borderRadius: const BorderRadius.all(Radius.circular(10)),
+      borderSide: BorderSide(color: color, width: 1.5),
+    );
+  }
+}
+
+class _FieldError extends StatelessWidget {
+  const _FieldError({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+
+    return Row(
+      children: [
+        Icon(Icons.error_rounded, size: 14, color: colors.error),
+        const SizedBox(width: 5),
+        Expanded(
+          child: Text(
+            message,
+            style: AppTypography.label.copyWith(
+              fontSize: 11,
+              fontWeight: FontWeight.w400,
+              color: colors.error,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+Future<bool> _confirmarSalida(BuildContext context) async {
+  final salir = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('¿Cancelar receta?'),
+      content: const Text('Si salís ahora, se pierden los cambios.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Seguir editando'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(
+            'Salir',
+            style: TextStyle(color: context.colors.error),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  return salir ?? false;
 }
